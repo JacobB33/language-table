@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog
 from PIL import Image, ImageTk
 import pickle
 import os
+import re
 
 class TrajectoryVisualizer:
     def __init__(self, root):
@@ -18,6 +19,7 @@ class TrajectoryVisualizer:
         self.current_frames = []
         self.current_frame_index = 0
         self.playing = False
+        self.search_regex = ""
 
     def create_widgets(self):
         # Frame for file selection
@@ -30,6 +32,17 @@ class TrajectoryVisualizer:
         self.trajectory_list = ttk.Combobox(self.file_frame, state="readonly")
         self.trajectory_list.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.trajectory_list.bind("<<ComboboxSelected>>", self.select_trajectory)
+
+        # Frame for search
+        self.search_frame = ttk.Frame(self.root)
+        self.search_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        self.search_label = ttk.Label(self.search_frame, text="Search QA (Regex):")
+        self.search_label.pack(side=tk.LEFT, padx=5)
+
+        self.search_entry = ttk.Entry(self.search_frame)
+        self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.search_entry.bind("<Return>", self.update_search)
 
         # Frame for video and QA
         self.display_frame = ttk.Frame(self.root)
@@ -104,7 +117,12 @@ class TrajectoryVisualizer:
             if 0 <= self.current_frame_index < len(qa_pairs):
                 frame_qa_pairs = qa_pairs[self.current_frame_index]
                 for question, answer in frame_qa_pairs:
-                    self.qa_listbox.insert(tk.END, f"Q: {question} | A: {answer}")
+                    if not self.search_regex or re.search(self.search_regex, question):
+                        self.qa_listbox.insert(tk.END, f"Q: {question} | A: {answer}")
+
+    def update_search(self, event):
+        self.search_regex = self.search_entry.get()
+        self.update_qa_list()
 
     def prev_frame(self):
         if self.current_frames:
