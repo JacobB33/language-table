@@ -90,18 +90,21 @@ class TrajectoryVisualizer:
         self.current_frame_index = 0
 
         self.update_canvas()
-        self.update_qa_list()
 
     def update_canvas(self):
         self.canvas.delete("all")
         if self.current_frames:
             self.canvas.create_image(320, 180, image=self.current_frames[self.current_frame_index])
+        self.update_qa_list()
 
     def update_qa_list(self):
         self.qa_listbox.delete(0, tk.END)
         if self.current_trajectory and 'qa_pairs' in self.current_trajectory:
-            for question, answer in self.current_trajectory['qa_pairs']:
-                self.qa_listbox.insert(tk.END, f"Q: {question} | A: {answer}")
+            qa_pairs = self.current_trajectory['qa_pairs']
+            if 0 <= self.current_frame_index < len(qa_pairs):
+                frame_qa_pairs = qa_pairs[self.current_frame_index]
+                for question, answer in frame_qa_pairs:
+                    self.qa_listbox.insert(tk.END, f"Q: {question} | A: {answer}")
 
     def prev_frame(self):
         if self.current_frames:
