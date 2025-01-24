@@ -24,6 +24,7 @@ import numpy as np
 class LanguageTableBlockVariants(enum.Enum):
   BLOCK_1 = 'BLOCK_1'  # 1 green star. Just for debugging.
   BLOCK_4 = 'BLOCK_4'  # The original 4 blocks.
+  NOVEL_8 = 'NOVEL_8' # 4 blocks of different color combos
   BLOCK_8 = 'BLOCK_8'  # 2 of each color, 2 of each shape, 8 total.
   BLOCK_4_WPOLE = 'BLOCK_4_WPOLE'  # original 4 blocks with purple pole as goal
   BLOCK_8_WPOLE = 'BLOCK_8_WPOLE'  # 8 blocks with purple pole as goal
@@ -39,6 +40,8 @@ def get_all_block_subsets(mode, training):
     return [FIXED_1_COMBINATION]
   if mode == LanguageTableBlockVariants.BLOCK_4:
     return [FIXED_4_COMBINATION]
+  if mode == LanguageTableBlockVariants.NOVEL_8:
+    return [NOVEL_8_COMBO]
   elif mode == LanguageTableBlockVariants.BLOCK_8:
     return [FIXED_8_COMBINATION]
   elif mode == LanguageTableBlockVariants.N_CHOOSE_K:
@@ -62,6 +65,8 @@ def get_block_set(mode):
     return FIXED_4_COMBINATION
   elif mode == LanguageTableBlockVariants.BLOCK_8:
     return FIXED_8_COMBINATION
+  elif mode == LanguageTableBlockVariants.NOVEL_8:
+    return NOVEL_8_COMBO
   elif mode == LanguageTableBlockVariants.N_CHOOSE_K:
     return ALL_BLOCKS
   else:
@@ -103,7 +108,14 @@ BLOCK_URDF_PATHS = collections.OrderedDict(
     green_cube='third_party/py/language_table/environments/assets/blocks/green_cube.urdf',
     green_star='third_party/py/language_table/environments/assets/blocks/green_star.urdf',
     green_pentagon='third_party/py/language_table/environments/assets/blocks/green_pentagon.urdf',
+    
+    # Purple Blocks
+    purple_moon='third_party/py/language_table/environments/assets/blocks/purple_moon.urdf',
+    purple_cube='third_party/py/language_table/environments/assets/blocks/purple_cube.urdf',
+    purple_star='third_party/py/language_table/environments/assets/blocks/purple_star.urdf',
+    purple_pentagon='third_party/py/language_table/environments/assets/blocks/purple_pentagon.urdf',
 )
+
 
 POLE_URDF_PATHS = collections.OrderedDict(
     # Purple Pole.
@@ -112,7 +124,7 @@ POLE_URDF_PATHS = collections.OrderedDict(
 
 # Use this just to define the observation space.
 DUMMY_START_BLOCK = list(BLOCK_URDF_PATHS.keys())[0]
-COLORS = ['red', 'blue', 'green', 'yellow']
+COLORS = ['red', 'blue', 'green', 'yellow', "purple"]
 SHAPES = ['moon', 'cube', 'star', 'pentagon']
 ALL_BLOCKS = ['_'.join(i) for i in itertools.product(COLORS, SHAPES)]
 MIN_K = 4
@@ -127,6 +139,16 @@ combo_rng.shuffle(ALL_COMBINATIONS)
 # Divide combinations by train / test.
 TRAIN_COMBINATIONS = ALL_COMBINATIONS[:int(len(ALL_COMBINATIONS)*0.9)]
 TEST_COMBINATIONS = ALL_COMBINATIONS[int(len(ALL_COMBINATIONS)*0.9):]
+
+NOVEL_8_COMBO = (
+    'red_cube',
+    'red_star',
+    'blue_star',
+    'purple_pentagon',
+    'green_moon',
+    'green_pentagon',
+    'yellow_moon',
+    'purple_cube',)
 
 # 8 total, 2 of each color, 2 of each shape.
 FIXED_8_COMBINATION = (

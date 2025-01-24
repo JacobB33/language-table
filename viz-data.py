@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import pickle
 import os
 import re
+import numpy as np
 
 class TrajectoryVisualizer:
     def __init__(self, root):
