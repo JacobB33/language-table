@@ -18,9 +18,14 @@
 import collections
 import copy
 import math
+import random
 import textwrap
 import time
 from typing import Dict, List, Tuple, Union
+from language_table.environments.rewards.block2block_relative_location import DIRECTION_IDS, DIRECTION_SYNONYMS
+from language_table.environments.rewards.block2block_relative_location import MAGNITUDE_X, MAGNITUDE_Y, MAGNITUDE_X_DIAG, MAGNITUDE_Y_DIAG, DIRECTIONS, BLOCK2BLOCK_REL_LOCATION_TARGET_DISTANCE
+from language_table.environments.rewards.constants import TARGET_BLOCK_DISTANCE
+from language_table.environments.rewards.block2absolutelocation import LOCATION_SYNONYMS, ABSOLUTE_LOCATIONS, Locations, BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE, BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE
 
 import cv2
 import gym
@@ -140,6 +145,10 @@ class LanguageTable(gym.Env):
     # Recreate the observation space after creating the reward.
     self.observation_space = self._create_observation_space(image_size)
 
+  
+  def get_control_frequency(self):
+    return self._control_frequency
+  
   def reset(self, reset_poses = True):
     # Choose a subset of the possible blocks to be on the table.
     all_combinations = blocks_module.get_all_block_subsets(
@@ -995,7 +1004,128 @@ class LanguageTable(gym.Env):
       for i in range(10):  # iterate over links of end-effector
         pybullet.setCollisionFilterPair(self._robot.end_effector,
                                         wall, i-1, -1, 0)
+  
+  def _get_visible_block_list(self):
+    visible_block_ids = [self._block_to_pybullet_id[i] for i in self._blocks_on_table]
+    ids_to_names = {v: k for k, v in self._block_to_pybullet_id.items()}
+    blocks = [obj for obj in self.get_pybullet_state()["objects"] if obj.obj_id in visible_block_ids]
+    # random.shuffle(blocks)
+    return blocks, ids_to_names
+  
+  def get_block_touching_questions(self):
+    blocks, ids_to_names = self._get_visible_block_list()
+    n_blocks = len(blocks) 
+    qa_pairs = []
+    for i in range(n_blocks):
+      for j in range(i+1, n_blocks):
+        block_x, _ = blocks[i].base_pose
+        block_y, _ = blocks[j].base_pose
+        # Calculate Euclidean distance
+        distance = np.linalg.norm(np.array(block_x)[:2] - np.array(block_y)[:2])
+        is_touching = distance < 0.05  # Define touching threshold
+        
+        # Populate results dictionary
+        question = f'Is the {ids_to_names[blocks[i].obj_id].replace("_", " ")} block touching the {ids_to_names[blocks[j].obj_id].replace("_", " ")} block?'
+        qa_pairs.append((question, is_touching))
+    assert len(qa_pairs) == len(set(qa_pairs))
+    return qa_pairs
+    
 
+  def get_relative_block2block_questions(self, number_of_questions=5, scale=1.3):
+    blocks, ids_to_names = self._get_visible_block_list()
+    qa_pairs = []
+    for i in range(number_of_questions):
+      pushing_block, target_block = random.sample(blocks, 2)
+      direction = random.choice(DIRECTION_IDS)
+      target_string = random.choice(DIRECTION_SYNONYMS[direction])
+
+      pushing_block_translation, _ = pushing_block.base_pose
+      target_block_translation, _ = target_block.base_pose
+      # remove the z component
+      pushing_block_translation = np.array(pushing_block_translation)[:2]
+      target_block_translation = np.array(target_block_translation)[:2]
+      
+      
+      # Consider the end point of the line 2x longer than the offset.
+      mag_x = MAGNITUDE_X_DIAG if 'diagonal' in direction else MAGNITUDE_X
+      mag_y = MAGNITUDE_Y_DIAG if 'diagonal' in direction else MAGNITUDE_Y
+      target_vector = np.array(DIRECTIONS[direction]) * np.array(
+          [mag_x*scale, mag_y*scale])
+      # Define target_translation (where to push to) as target block translation
+      # offset by target_vector.
+      offset_translation = np.array(target_block_translation) + target_vector
+
+      diff = offset_translation - target_block_translation
+      # Consider all points half the distance from target block to offset.
+      minpoint = diff * 0.5
+      # Consider all points 10% further than the offset.
+      maxpoint = diff * 1.1
+      # Is the target block somewhere on the line between min point and max point?
+      diffs = np.linspace(minpoint, maxpoint, 10)
+      pushing_block_on_line = False
+      for cand_offset in diffs:
+        point = target_block_translation + cand_offset
+        dist = np.linalg.norm(point - pushing_block_translation)
+        if dist < BLOCK2BLOCK_REL_LOCATION_TARGET_DISTANCE:
+          pushing_block_on_line = True
+          break
+      
+      # Populate results list
+      question = f'Is the {ids_to_names[pushing_block.obj_id].replace("_", " ")} block {target_string} the {ids_to_names[target_block.obj_id].replace("_", " ")} block?'
+      qa_pairs.append((question, pushing_block_on_line))
+    return qa_pairs
+  
+  def get_peg_block_questions(self):
+    blocks, ids_to_names = self._get_visible_block_list()
+    qa_pairs = []
+    for block in blocks:
+      block_position, _ = block.base_pose
+      block_position = np.array(block_position)[:2]
+      
+      state = self._compute_state()
+      
+      dist = np.linalg.norm(
+        np.array(block_position) -
+        np.array(state['effector_target_translation']))
+      
+      answer = dist < TARGET_BLOCK_DISTANCE
+      question = f'Is the {ids_to_names[block.obj_id].replace("_", " ")} block next to the peg?'
+      qa_pairs.append((question, answer))
+    return qa_pairs
+
+
+  def get_block_to_board_questions(self, number_of_questions=5):
+    blocks, ids_to_names = self._get_visible_block_list()
+    qa_pairs = []
+    for i in range(number_of_questions):
+      block = random.choice(blocks)
+      block_position, _ = block.base_pose
+      block_position = np.array(block_position)[:2]
+      
+      target_translation = random.choice(list(ABSOLUTE_LOCATIONS.keys()))
+
+      dist = np.linalg.norm(
+          np.array(block_position) - np.array(ABSOLUTE_LOCATIONS[target_translation]))
+
+      if target_translation ==  Locations.CENTER.value:
+        target_dist = BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE
+      else:
+        target_dist = BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE
+
+      success =  dist < target_dist
+
+      question = f"Is the {ids_to_names[block.obj_id].replace('_', ' ')} block in the {random.choice(LOCATION_SYNONYMS[target_translation])} of the board?"
+      qa_pairs.append((question, success))
+    return qa_pairs
+
+  def get_block_states(self):
+    blocks, ids_to_names = self._get_visible_block_list()
+    state = self._compute_state()
+    block_positions = {ids_to_names[obj.obj_id]: np.array(obj.base_pose[0])[:2] for obj in blocks}
+    # GET THE PEG POSE
+    block_positions["peg"] = np.array(state['effector_target_translation'])
+
+    return block_positions
 
 def add_debug_info_to_image(image,
                             info_dict,
@@ -1036,3 +1166,5 @@ def sleep_spin(sleep_time_sec):
   t0 = time.perf_counter()
   while time.perf_counter() - t0 < sleep_time_sec:
     pass
+
+
