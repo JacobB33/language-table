@@ -402,7 +402,7 @@ class LanguageTable(gym.Env):
     aspect_ratio = image_size[1] / image_size[0]
     projm = self._pybullet_client.computeProjectionMatrixFOV(
         fovh, aspect_ratio, znear, zfar)
-
+    ## NOTE These are returned in column-major order which is weird 😭
     return viewm, projm, front_position, lookat, updir
 
   def compute_state(
@@ -1094,6 +1094,24 @@ class LanguageTable(gym.Env):
     return qa_pairs
 
 
+  def get_block_peg_info(self):
+    blocks, ids_to_names = self._get_visible_block_list()
+    result = {}
+    for block in blocks:
+      block_position, _ = block.base_pose
+      block_position = np.array(block_position)[:2]
+      
+      state = self._compute_state()
+      
+      dist = np.linalg.norm(
+        np.array(block_position) -
+        np.array(state['effector_target_translation']))
+      
+      result[ids_to_names[block.obj_id]] = dist
+
+    return result
+
+
   def get_block_to_board_questions(self, number_of_questions=5):
     blocks, ids_to_names = self._get_visible_block_list()
     qa_pairs = []
@@ -1127,6 +1145,38 @@ class LanguageTable(gym.Env):
 
     return block_positions
 
+  def get_camera_pix_coords(self, pose):
+    if pose.ndim == 1:
+      pose = pose[np.newaxis, :]
+
+    if pose.shape[-1] == 2:
+      zeros_and_ones = np.zeros((pose.shape[0], 2))
+      zeros_and_ones[:, 1] = 1
+      pose =  np.concatenate([pose, zeros_and_ones], axis=1).T # 4 x N
+   
+    viewm, projm, _, _, _ = self.calc_camera_params(self.image_size)
+    screen_height, screen_width = self.image_size
+
+    view_matrix = np.array(viewm).reshape(4, 4).T
+    projection_matrix = np.array(projm).reshape(4, 4).T
+    clip_coords = projection_matrix @ (view_matrix @ pose)
+    clip_coords = clip_coords.T
+    
+    w = clip_coords[..., 3]
+    ndc = clip_coords[..., :3] / w[:, np.newaxis]
+    ndc_x = ndc[:, 0]
+    ndc_y = ndc[:, 1]  
+
+    # Convert NDC coordinates to pixel coordinates
+    pixel_x = np.round((ndc_x + 1.0) * (screen_width - 1) * 0.5).astype(int)
+    pixel_y = np.round((1.0-ndc_y) * (screen_height - 1) * 0.5).astype(int)
+    
+    if len(pixel_x) == 1:
+      pixel_x = pixel_x.item()
+      pixel_y = pixel_y.item()
+    return pixel_x, pixel_y
+
+  
 def add_debug_info_to_image(image,
                             info_dict,
                             pos=(0, 0),

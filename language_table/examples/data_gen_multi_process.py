@@ -115,10 +115,10 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
     else:
         logging.info("Episode %d: failure.", ep_num)
         return False
-
-    # Write out video of rollout.
-    video_path = os.path.join(workdir, "videos/", f"{reward_name}_{ep_num}_{success_str}.mp4")
-    mediapy_lib.write_video(video_path, frames, fps=10)
+    if config.save_video:
+        # Write out video of rollout.
+        video_path = os.path.join(workdir, "videos/", f"{reward_name}_{ep_num}_{success_str}.mp4")
+        mediapy_lib.write_video(video_path, frames, fps=10)
 
     # Save the trajectory
     trajectory = {
@@ -164,10 +164,10 @@ def generate_data(workdir, config):
     num_evals_per_reward = config.num_evals_per_reward
     max_episode_steps = config.max_episode_steps
 
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()-2) as pool:
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         for reward_name, reward_factory in rewards.items():
             worker_fn = partial(
-                generate_episode, reward_name, reward_factory, config, max_episode_steps=max_episode_steps, workdir=workdir
+                generate_episode_wrapper, reward_name, reward_factory, config, max_episode_steps=max_episode_steps, workdir=workdir
             )
             pool.map(worker_fn, range(num_evals_per_reward))
             logging.error("Finished reward: %s", reward_name)

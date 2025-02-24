@@ -2,11 +2,12 @@ from ml_collections import ConfigDict
 from language_table.environments import blocks
 def get_config():
     config = ConfigDict()
-    config.num_evals_per_reward = 3
-    config.save_dir = "/home/jacob/projects/semantic_world_modeling/language-table/language_table/outputs_novel_scene"
+    config.num_evals_per_reward = 20 
+    config.save_dir = "/home/jacob/projects/semantic_world_modeling/language-table/language_table/240_train"
     config.random  = False
     config.max_episode_steps = 200
     config.target_height = 180
     config.target_width = 320
-    config.block_mode = blocks.LanguageTableBlockVariants.NOVEL_8
+    config.block_mode = blocks.LanguageTableBlockVariants.BLOCK_8
+    config.save_video = False
     return config

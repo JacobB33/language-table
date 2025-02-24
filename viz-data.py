@@ -100,6 +100,7 @@ class TrajectoryVisualizer:
             trajectory = pickle.load(f)
 
         self.current_trajectory = trajectory
+        pickle.dump(trajectory, open("trajectory.pkl", "wb"))
         self.current_frames = [ImageTk.PhotoImage(Image.fromarray(frame)) for frame in trajectory['frames']]
         self.current_frame_index = 0
 
