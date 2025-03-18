@@ -74,10 +74,6 @@ DIRECTION_IDS = [
     'down',
     'left',
     'right',
-    'diagonal_up_left',
-    'diagonal_up_right',
-    'diagonal_down_left',
-    'diagonal_down_right',
 ]
 
 

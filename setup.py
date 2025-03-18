@@ -30,7 +30,7 @@ except IOError:
 
 install_requires = [
     'clu',
-    'dm-reverb-nightly>=0.9.0.dev20221205',
+    # 'dm-reverb-nightly>=0.9.0.dev20221205',
     'gym<=0.23.0',
     'matplotlib',
     'numpy',
@@ -40,9 +40,9 @@ install_requires = [
     'rlds>=0.1.7',
     'scipy',
     'six',
-    'tf-nightly>=2.12.0.dev20230201',
+    # 'tf-nightly>=2.12.0.dev20230201',
     'tensorflow_datasets>=4.7.0',
-    'tf_agents>=0.14.0',
+    # 'tf_agents>=0.14.0',
 ]
 
 

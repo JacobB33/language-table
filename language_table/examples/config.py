@@ -2,8 +2,8 @@ from ml_collections import ConfigDict
 from language_table.environments import blocks
 def get_config():
     config = ConfigDict()
-    config.num_evals_per_reward = 20 
-    config.save_dir = "/home/jacob/projects/semantic_world_modeling/language-table/language_table/240_train"
+    config.num_evals_per_reward = 5 
+    config.save_dir = "/home/jacob/projects/semantic_world_modeling/language-table/language_table/test"
     config.random  = False
     config.max_episode_steps = 200
     config.target_height = 180

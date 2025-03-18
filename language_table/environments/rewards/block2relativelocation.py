@@ -87,7 +87,12 @@ DIRECTION_SYNONYMS = {
     'up': ['up', 'upwards'],
     'down': ['down', 'downwards'],
     'left': ['to the left', 'left'],
-    'right': ['to the right', 'right']
+    'right': ['to the right', 'right'],
+    'diagonal_up_left': ['up and to the left'],
+    'diagonal_up_right': ['up and to the right'],
+    'diagonal_down_left': ['down and to the left'],
+    'diagonal_down_right': ["down and to the right"],
+
 }
 
 DIAGONAL_PREPOSITIONS = [
