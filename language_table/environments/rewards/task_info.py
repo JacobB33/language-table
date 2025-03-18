@@ -28,7 +28,11 @@ class Block2BlockTaskInfo:
   block1: str
   block2: str
 
-
+@dataclasses.dataclass
+class NoOpTaskInfo:
+  """Data class defining a chosen block2block task after reset."""
+  instruction: str
+  block: str
 @dataclasses.dataclass
 class Block2LocationTaskInfo:
   """Class defining a chosen block2block task after reset."""
@@ -98,6 +102,7 @@ ALL_TASKS = [
     Point2BlockTaskInfo,
     Block2LineTaskInfo,
     Block2PoleTaskInfo,
+    NoOpTaskInfo,
 ]
 
 # Return this if cannot create a valid board state and need to reset.

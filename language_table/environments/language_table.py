@@ -816,6 +816,14 @@ class LanguageTable(gym.Env):
       self._oracle_target_translation = None
       self._target_absolute_location = None
       self._target_relative_location = None
+    elif isinstance(info, task_info.NoOpTaskInfo):
+      # Get the info parameterizing "no-op" tasks.
+      instruction_str = info.instruction
+      self._start_block = info.block
+      self._oracle_target_block = info.block
+      self._oracle_target_translation = None
+      self._target_absolute_location = None
+      self._target_relative_location = None
     else:
       raise ValueError('Unknown task info: %s' % info)
 
