@@ -1,19 +1,18 @@
 import multiprocessing
-from functools import partial
-import collections
-from collections.abc import Sequence
 import os
 import pickle
 import random
+from functools import partial
 
-from absl import app
-from absl import flags
-from absl import logging
-
-import jax
+import mediapy as mediapy_lib
 import numpy as np
+import tensorflow as tf
+from absl import app
+from absl import logging
+from ml_collections import config_flags
+from tf_agents.environments import gym_wrapper
+from tf_agents.environments import wrappers as tfa_wrappers
 
-from language_table.environments import blocks
 from language_table.environments import language_table
 from language_table.environments.oracles import push_oracle_rrt_slowdown
 from language_table.environments.rewards import block2absolutelocation, point2block
@@ -22,16 +21,7 @@ from language_table.environments.rewards import block2block_relative_location
 from language_table.environments.rewards import block2relativelocation
 from language_table.environments.rewards import separate_blocks
 from language_table.eval import wrappers as env_wrappers
-from language_table.train import policy as jax_policy
-from language_table.train.networks import lava
 
-import mediapy as mediapy_lib
-from ml_collections import config_flags
-
-import tensorflow as tf
-from tf_agents.environments import gym_wrapper
-from tf_agents.environments import wrappers as tfa_wrappers
-from dataclasses import dataclass
 _CONFIG = config_flags.DEFINE_config_file(
     "config", "/home/jacob/projects/semantic_world_modeling/language-table/language_table/examples/config.py", "Training configuration.", lock_config=True)
 # _WORKDIR = flags.DEFINE_string("workdir", _CONFIG.value.save_dir, "Evaluation result directory.")
