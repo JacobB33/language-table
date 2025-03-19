@@ -17,7 +17,7 @@
 
 from typing import Any, Optional
 
-from language_table.common import clip_tokenizer
+# from language_table.common import clip_tokenizer
 import numpy as np
 import tensorflow as tf
 from tf_agents.environments import wrappers
@@ -25,38 +25,44 @@ from tf_agents.environments import wrappers
 
 class ClipTokenWrapper(wrappers.PyEnvironmentBaseWrapper):
   """Environment wrapper that adds CLIP tokens to the obs."""
+  pass
 
-  def __init__(self, env, context_length = 77):
-    """Centrally crops an image from a dict observation."""
-    super(ClipTokenWrapper, self).__init__(env)
-    self._context_length = context_length
-    vocab_lookup = clip_tokenizer.create_vocab()
-    self._tokenizer = clip_tokenizer.ClipTokenizer(vocab_lookup)
-    self._current_tokens = None
 
-  def _reset(self):
-    time_step = self._env.reset()
-    self._current_tokens = self._tokenize(time_step.observation['instruction'])
-    new_obs = time_step.observation
-    new_obs['instruction_tokenized_clip'] = self._current_tokens
-    return time_step._replace(observation=new_obs)
 
-  def _step(self, action):
-    time_step = self._env.step(action)
-    new_obs = time_step.observation
-    new_obs['instruction_tokenized_clip'] = self._current_tokens
-    return time_step._replace(observation=new_obs)
-
-  def _tokenize(self, instruction):
-    bytes_list = instruction
-    non_zero = bytes_list[np.where(bytes_list != 0)]
-    if non_zero.shape[0] == 0:
-      decoded = ''
-    else:
-      bytes_list = bytes(non_zero.tolist())
-      decoded = bytes_list.decode('utf-8')
-    tokens = clip_tokenizer.tokenize_text(decoded, self._tokenizer)[0]
-    return tokens
+# class ClipTokenWrapper(wrappers.PyEnvironmentBaseWrapper):
+#   """Environment wrapper that adds CLIP tokens to the obs."""
+#
+#   def __init__(self, env, context_length = 77):
+#     """Centrally crops an image from a dict observation."""
+#     super(ClipTokenWrapper, self).__init__(env)
+#     self._context_length = context_length
+#     vocab_lookup = clip_tokenizer.create_vocab()
+#     self._tokenizer = clip_tokenizer.ClipTokenizer(vocab_lookup)
+#     self._current_tokens = None
+#
+#   def _reset(self):
+#     time_step = self._env.reset()
+#     self._current_tokens = self._tokenize(time_step.observation['instruction'])
+#     new_obs = time_step.observation
+#     new_obs['instruction_tokenized_clip'] = self._current_tokens
+#     return time_step._replace(observation=new_obs)
+#
+#   def _step(self, action):
+#     time_step = self._env.step(action)
+#     new_obs = time_step.observation
+#     new_obs['instruction_tokenized_clip'] = self._current_tokens
+#     return time_step._replace(observation=new_obs)
+#
+#   def _tokenize(self, instruction):
+#     bytes_list = instruction
+#     non_zero = bytes_list[np.where(bytes_list != 0)]
+#     if non_zero.shape[0] == 0:
+#       decoded = ''
+#     else:
+#       bytes_list = bytes(non_zero.tolist())
+#       decoded = bytes_list.decode('utf-8')
+#     tokens = clip_tokenizer.tokenize_text(decoded, self._tokenizer)[0]
+#     return tokens
 
 
 class CentralCropImageWrapper(wrappers.PyEnvironmentBaseWrapper):
