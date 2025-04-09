@@ -14,6 +14,7 @@ from tf_agents.environments import gym_wrapper
 from tf_agents.environments import wrappers as tfa_wrappers
 
 from language_table.environments import language_table
+from language_table.environments import lang_table_data_generation
 from language_table.environments.oracles import push_oracle_rrt_slowdown
 from language_table.environments.rewards import block2absolutelocation, point2block
 from language_table.environments.rewards import block2block
@@ -29,10 +30,11 @@ _CONFIG = config_flags.DEFINE_config_file(
 tf.config.experimental.set_visible_devices([], "GPU")
 def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_steps, workdir):
     """Generates a single episode data."""
-    env = language_table.LanguageTable(
+    env = lang_table_data_generation.LanguageTableDataGeneration(
         block_mode=config.block_mode,
         reward_factory=reward_factory,
-        seed=ep_num  # Ensure different seeds per worker
+        seed=ep_num,  # Ensure different seeds per worker
+        delay_reward_steps = 5
     )
     env = gym_wrapper.GymWrapper(env)
     # env = env_wrappers.ClipTokenWrapper(env)
@@ -153,14 +155,18 @@ def generate_data(workdir, config):
 
     num_evals_per_reward = config.num_evals_per_reward
     max_episode_steps = config.max_episode_steps
-
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+    if config.debug:
         for reward_name, reward_factory in rewards.items():
-            worker_fn = partial(
-                generate_episode_wrapper, reward_name, reward_factory, config, max_episode_steps=max_episode_steps, workdir=workdir
-            )
-            pool.map(worker_fn, range(num_evals_per_reward))
-            logging.error("Finished reward: %s", reward_name)
+            for i in range(num_evals_per_reward):
+                generate_episode_wrapper(reward_name, reward_factory, config, i, max_episode_steps, workdir)
+    else:
+        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            for reward_name, reward_factory in rewards.items():
+                worker_fn = partial(
+                    generate_episode_wrapper, reward_name, reward_factory, config, max_episode_steps=max_episode_steps, workdir=workdir
+                )
+                pool.map(worker_fn, range(num_evals_per_reward))
+                logging.error("Finished reward: %s", reward_name)
 
 
 def main(argv):
