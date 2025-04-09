@@ -33,7 +33,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
     env = lang_table_data_generation.LanguageTableDataGeneration(
         block_mode=config.block_mode,
         reward_factory=reward_factory,
-        seed=ep_num,  # Ensure different seeds per worker
+        seed=ep_num + config.seed_offset,  # Ensure different seeds per worker
         delay_reward_steps = 5
     )
     env = gym_wrapper.GymWrapper(env)

@@ -143,6 +143,27 @@ DIRECTION_SYNONYMS = {
                             'diagonally down and to the right of the'],
 }
 
+DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION = {
+    'up': ['upwards', 'up', 'towards the top'],
+    'down': ['down', 'downwards', 'towards the bottom'],
+    'left': ['to the left', 'towards the left',
+             'left', 'leftwards' ],
+    'right': ['to the right', 'towards the right',
+              'right', 'rightwards'],
+    'diagonal_up_left': ['to the top left side of the',
+                         'to the top left of the',
+                         'diagonally up and to the left of the'],
+    'diagonal_up_right': ['to the top right side of the',
+                          'to the top right of the',
+                          'diagonally up and to the right of the'],
+    'diagonal_down_left': ['to the bottom left side of the',
+                           'to the bottom left of the',
+                           'diagonally down and to the left of the'],
+    'diagonal_down_right': ['to the bottom right side of the',
+                            'to the bottom right of the',
+                            'diagonally down and to the right of the'],
+}
+
 
 def generate_all_instructions(block_mode):
   """Generate all instructions for block2relativeposition."""

@@ -81,6 +81,20 @@ class LanguageTableDataGeneration(LanguageTable):
             # Plot the pushing block position
             plt.scatter(pixel_x[-1], pixel_y[-1], color='blue', s=100, marker='x',
                         label=f"Relative Of Block")
+            # # Add a circle of points around the "relative to" block with radius 0.1 meters
+            # circle_points = []
+            # num_circle_points = 36  # For a smooth circle
+            # circle_radius = 0.03  # 10cm radius
+            # for angle in np.linspace(0, 2 * np.pi, num_circle_points):
+            #     # Calculate point on circle
+            #     circle_x = relative_to_pose[0] + circle_radius * np.cos(angle)
+            #     circle_y = relative_to_pose[1] + circle_radius * np.sin(angle)
+            #     circle_points.append([circle_x, circle_y, 0.0, 1])
+            #
+            # # Convert circle points to numpy array for projection
+            # circle_points_np = np.array(circle_points).T
+            # circle_pixel_x, circle_pixel_y = self.get_camera_pix_coords(circle_points_np)
+            # plt.plot(circle_pixel_x, circle_pixel_y, 'y-', linewidth=2, alpha=0.7, label=f"{circle_radius}m Radius")
             plt.suptitle(f"Question: {question}\nAnswer: {pushing_block_on_line}", fontsize=14)
             plt.legend(loc='upper right')
             # Show the plot
