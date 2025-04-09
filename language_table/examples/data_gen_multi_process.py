@@ -24,7 +24,7 @@ from language_table.environments.rewards import separate_blocks
 from language_table.eval import wrappers as env_wrappers
 
 _CONFIG = config_flags.DEFINE_config_file(
-    "config", "/home/jacob/projects/semantic_world_modeling/language-table/language_table/examples/config.py", "Training configuration.", lock_config=True)
+    "config", "/home/jacob/projects/semantic_world_modeling/language-table/language_table/examples/config_generate.py", "Training configuration.", lock_config=True)
 # _WORKDIR = flags.DEFINE_string("workdir", _CONFIG.value.save_dir, "Evaluation result directory.")
 
 tf.config.experimental.set_visible_devices([], "GPU")
@@ -93,7 +93,8 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
             random.sample(env.get_block_touching_questions(), 8) +
             env.get_relative_block2block_questions(number_of_questions=8) +
             env.get_peg_block_questions() + # there are 8 of them
-            env.get_block_to_board_questions(number_of_questions=8)
+            env.get_block_to_board_questions(number_of_questions=8) +
+            env.get_peg_relative_to_block_questions(number_of_questions=8)
         )
         block_states.append(env.get_block_states())
 
