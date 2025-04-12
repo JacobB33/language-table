@@ -5,6 +5,7 @@ from typing import List
 
 import h5py
 import numpy as np
+from tqdm.auto import tqdm
 
 from language_table.environments.blocks import LanguageTableBlockVariants
 from language_table.environments.lang_table_data_generation import LanguageTableDataGeneration
@@ -100,7 +101,7 @@ def main(argv):
     config = _CONFIG.value
     files = [f for f in os.listdir(config.pickle_dir) if f.endswith(".pkl")]
     processed_data = []
-    for file in files:
+    for file in tqdm(files):
         processed_data.append(process_one_file(config, os.path.join(config.pickle_dir, file)))
     save_data(config, processed_data)
 

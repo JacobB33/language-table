@@ -3,3 +3,4 @@
 *.pyc
 language_table/outputs*
 *demos*
+language_table/datasets*

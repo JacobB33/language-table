@@ -2,7 +2,7 @@ import os
 import pickle as pkl
 import json
 
-ds_path = '/home/jacob/projects/semantic_world_modeling/language-table/language_table/240_gen_q/demos'
+ds_path = '/language_table/240_gen_q/demos'
 gem_path = 'gemini'
 
 matched = 0

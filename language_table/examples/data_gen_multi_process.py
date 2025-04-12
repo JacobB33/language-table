@@ -52,6 +52,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         env, use_ee_planner=True
     )
     plan_success = False
+
     while not plan_success:
         ts = env.reset()
         raw_state = env.compute_state()
@@ -61,7 +62,15 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
                 "Resetting environment because the "
                 "initialization was invalid (could not find motion plan)."
             )
-
+    metadata = {
+        "reward_name": reward_name,
+        "instruction_str": env._instruction_str,
+        "start_block": env._start_block,
+        "oracle_target_block": env._oracle_target_block,
+        "oracle_target_translation": env._oracle_target_translation,
+        "target_absolute_location": env._target_absolute_location,
+        "target_relative_location": env._target_relative_location,
+    }
     frames = [(ts.observation["rgb"][0] * 255).astype(np.uint8)]
 
     initial_state = env.get_pybullet_state()
@@ -79,9 +88,9 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
     while not ts.is_last():
         raw_state = env.compute_state()
         if config.random:
-            policy_step = np.random.uniform(-.018, .018, size=2)
-            if np.random.rand() < 0.9:
-                policy_step = oracle_policy._get_action_for_block_target(raw_state)
+            policy_step = np.random.uniform(-.025, .025, size=2)
+            # if np.random.rand() < 0.9:
+            #     policy_step = oracle_policy._get_action_for_block_target(raw_state)
         else:
             policy_step = oracle_policy._get_action_for_block_target(raw_state)
 
@@ -107,7 +116,9 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         logging.info("Episode %d: success.", ep_num)
     else:
         logging.info("Episode %d: failure.", ep_num)
-        return False
+        if not config.random:
+            # this episode failed so we want to generate a new one. If we are in random mode, we want to keep the episode.
+            return False
     if config.save_video:
         # Write out video of rollout.
         video_path = os.path.join(workdir, "videos/", f"{reward_name}_{ep_num}_{success_str}.mp4")
@@ -115,6 +126,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
 
     # Save the trajectory
     trajectory = {
+        "metadata": metadata,
         "initial_state": initial_state,
         "actions": actions,
         "observations": observations,
@@ -147,11 +159,11 @@ def generate_data(workdir, config):
 
     rewards = {
         "blocktoblock": block2block.BlockToBlockReward,
-        "blocktoabsolutelocation": block2absolutelocation.BlockToAbsoluteLocationReward,
-        "blocktoblockrelativelocation": block2block_relative_location.BlockToBlockRelativeLocationReward,
-        "blocktorelativelocation": block2relativelocation.BlockToRelativeLocationReward,
-        "separate": separate_blocks.SeparateBlocksReward,
-        "peg to block": point2block.PointToBlockReward,
+        # "blocktoabsolutelocation": block2absolutelocation.BlockToAbsoluteLocationReward,
+        # "blocktoblockrelativelocation": block2block_relative_location.BlockToBlockRelativeLocationReward,
+        # "blocktorelativelocation": block2relativelocation.BlockToRelativeLocationReward,
+        # "separate": separate_blocks.SeparateBlocksReward,
+        # "peg to block": point2block.PointToBlockReward,
     }
 
     num_evals_per_reward = config.num_evals_per_reward
