@@ -32,6 +32,8 @@ MAGNITUDE = 0.1
 # Consider task solved when we are this far away from invisible target.
 DISTANCE_TO_TARGET_THRESHOLD = 0.025
 
+MIN_DIST_AWAY_FROM_AVOID_BLOCKS = .06
+
 
 SEPARATE_TEMPLATES = [
     'pull the %s apart from the %s',
@@ -261,17 +263,30 @@ class SeparateBlocksReward(base_reward.LanguageTableReward):
 
   def reward_for(self, state, push_block, target_translation):
     """Gets reward for a pushing block and a relative location."""
-    dist = self._dist_for(state, push_block, target_translation)
+    dists = [self._dist_for(state, push_block, self._get_translation_for_block(avioid_block, state)) for avioid_block in self._avoid_blocks]
     reward = 0.0
     done = False
-    if dist < DISTANCE_TO_TARGET_THRESHOLD:
-      if self._in_reward_zone_steps >= self._delay_reward_steps:
-        reward = self._goal_reward
-        done = True
-      else:
-        logging.info('In reward zone for %d steps', self._in_reward_zone_steps)
-        self._in_reward_zone_steps += 1
+    if min(dists) > MIN_DIST_AWAY_FROM_AVOID_BLOCKS:
+        if self._in_reward_zone_steps >= self._delay_reward_steps:
+            reward = self._goal_reward
+            done = True
+        else:
+            logging.info('In reward zone for %d steps', self._in_reward_zone_steps)
+            self._in_reward_zone_steps += 1
     return reward, done
+  
+    # dist = self._dist_for(state, push_block, self._avoid_centroid_xy)
+    # reward = 0.0
+
+    # done = False
+    # if dist < DISTANCE_TO_TARGET_THRESHOLD:
+    #   if self._in_reward_zone_steps >= self._delay_reward_steps:
+    #     reward = self._goal_reward
+    #     done = True
+    #   else:
+    #     logging.info('In reward zone for %d steps', self._in_reward_zone_steps)
+    #     self._in_reward_zone_steps += 1
+    # return reward, done
 
   def reward_for_info(self, state,
                       info):
