@@ -18,18 +18,17 @@
 import collections
 import copy
 import math
-import random
 import textwrap
 import time
-from typing import Dict, List, Tuple, Union
-from language_table.environments.rewards.block2block_relative_location import DIRECTION_IDS, DIRECTION_SYNONYMS
-from language_table.environments.rewards.block2block_relative_location import MAGNITUDE_X, MAGNITUDE_Y, MAGNITUDE_X_DIAG, MAGNITUDE_Y_DIAG, DIRECTIONS, BLOCK2BLOCK_REL_LOCATION_TARGET_DISTANCE
-from language_table.environments.rewards.constants import TARGET_BLOCK_DISTANCE
-from language_table.environments.rewards.block2absolutelocation import LOCATION_SYNONYMS, ABSOLUTE_LOCATIONS, Locations, BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE, BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE
+from typing import Dict, List
 
 import cv2
 import gym
+import numpy as np
+import pybullet
+import pybullet_utils.bullet_client as bullet_client
 from gym import spaces
+from scipy.spatial import transform
 
 from language_table.environments import blocks as blocks_module
 from language_table.environments import constants
@@ -37,14 +36,9 @@ from language_table.environments.rewards import task_info
 from language_table.environments.utils import utils_pybullet
 from language_table.environments.utils import xarm_sim_robot
 from language_table.environments.utils.pose3d import Pose3d
-from language_table.environments.utils.utils_pybullet import add_visual_sphere
 from language_table.environments.utils.utils_pybullet import ObjState
 from language_table.environments.utils.utils_pybullet import XarmState
-
-import numpy as np
-from scipy.spatial import transform
-import pybullet
-import pybullet_utils.bullet_client as bullet_client
+from language_table.environments.utils.utils_pybullet import add_visual_sphere
 
 
 class LanguageTable(gym.Env):

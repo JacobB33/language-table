@@ -6,8 +6,12 @@ import numpy as np
 from language_table.environments.rewards.block2block_relative_location import DIRECTION_IDS, DIRECTION_SYNONYMS
 from language_table.environments.rewards.block2block_relative_location import MAGNITUDE_X, MAGNITUDE_Y, MAGNITUDE_X_DIAG, MAGNITUDE_Y_DIAG, DIRECTIONS, BLOCK2BLOCK_REL_LOCATION_TARGET_DISTANCE
 from language_table.environments.rewards.constants import TARGET_BLOCK_DISTANCE
-from language_table.environments.rewards.block2absolutelocation import LOCATION_SYNONYMS, ABSOLUTE_LOCATIONS, Locations, BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE, BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE
+from language_table.environments.rewards.block2absolutelocation import LOCATION_SYNONYMS, ABSOLUTE_LOCATIONS, Locations, \
+    BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE, BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE, ABSOLUTE_LOCATIONS_POSES, \
+    ABSOLUTE_LOCATIONS_IDS
+import matplotlib.pyplot as plt
 
+TOUCHING_DISTANCE_THRESHOLD = 0.05
 
 class LanguageTableDataGeneration(LanguageTable):
     def _get_visible_block_list(self):
@@ -17,6 +21,37 @@ class LanguageTableDataGeneration(LanguageTable):
         # random.shuffle(blocks)
         return blocks, ids_to_names
 
+    def get_block_states(self):
+        blocks, ids_to_names = self._get_visible_block_list()
+        state = self._compute_state()
+        block_positions = {ids_to_names[obj.obj_id]: np.array(obj.base_pose[0])[:2] for obj in blocks}
+        # GET THE PEG POSE
+        block_positions["peg"] = np.array(state['effector_target_translation'])
+
+        return block_positions
+
+    def get_block_peg_info(self):
+        blocks, ids_to_names = self._get_visible_block_list()
+        result = {}
+        for block in blocks:
+            block_position, _ = block.base_pose
+            block_position = np.array(block_position)[:2]
+
+            state = self._compute_state()
+
+            dist = np.linalg.norm(
+                np.array(block_position) -
+                np.array(state['effector_target_translation']))
+
+            result[ids_to_names[block.obj_id]] = dist
+
+        return result
+
+    def check_in_direction_range(self, pose_to, pose_of, scale):
+        # Check if the distance between the two points is within the specified range
+        dist = np.linalg.norm(np.array(pose_to) - np.array(pose_of))
+        return dist < scale * (MAGNITUDE_X - 0.01)
+    
     def check_direction(self, relative_to_pose, relative_of_pose, direction, scale, question="", viz=False):
         # Consider the end point of the line 2x longer than the offset.
         mag_x = MAGNITUDE_X_DIAG if 'diagonal' in direction else MAGNITUDE_X
@@ -44,7 +79,6 @@ class LanguageTableDataGeneration(LanguageTable):
                 pushing_block_on_line = True
                 break
         if viz:
-            import matplotlib.pyplot as plt
             state = self._compute_state()
             image = state['rgb']
             # Create a matplotlib figure for visualization
@@ -103,8 +137,8 @@ class LanguageTableDataGeneration(LanguageTable):
             time.sleep(1)
 
         return pushing_block_on_line
-
-    def get_block_touching_questions(self):
+    
+    def get_block_touching_questions(self, num_questions=8):
         touching_templates = [
             "Is the {block1} touching the {block2}?",
             "Are the {block1} and {block2} blocks in contact with each other?",
@@ -118,29 +152,51 @@ class LanguageTableDataGeneration(LanguageTable):
 
         blocks, ids_to_names = self._get_visible_block_list()
         n_blocks = len(blocks)
+        # Extract positions and names once
+        positions = np.array([block.base_pose[0][:2] for block in blocks])
+        names = [ids_to_names[block.obj_id].replace("_", " ") for block in blocks]
+
+        # Generate all i < j pairs
+        i_idx, j_idx = np.triu_indices(n_blocks, k=1)
+        vec_dists = np.linalg.norm(positions[i_idx] - positions[j_idx], axis=1)
+        is_touching = vec_dists < TOUCHING_DISTANCE_THRESHOLD
         qa_pairs = []
-        for i in range(n_blocks):
-            for j in range(i + 1, n_blocks):
-                block_x, _ = blocks[i].base_pose
-                block_y, _ = blocks[j].base_pose
-                # Calculate Euclidean distance
-                distance = np.linalg.norm(np.array(block_x)[:2] - np.array(block_y)[:2])
-                is_touching = distance < 0.05  # Define touching threshold
+        for idx, (i, j) in enumerate(zip(i_idx, j_idx)):
+            block1_name, block2_name = names[i], names[j]
+            if random.choice([True, False]):
+                block1_name, block2_name = block2_name, block1_name
+            # Randomly select a question template
+            template = random.choice(touching_templates)
+            question = template.format(block1=block1_name, block2=block2_name)
+            qa_pairs.append((question, bool(is_touching[idx])))
+            
+        yes_pairs = [pair for pair in qa_pairs if pair[1]]
+        no_pairs = [pair for pair in qa_pairs if not pair[1]]
 
-                block1_name = ids_to_names[blocks[i].obj_id].replace("_", " ")
-                block2_name = ids_to_names[blocks[j].obj_id].replace("_", " ")
+        num_yes = len(yes_pairs)
+        num_no = len(no_pairs)
 
-                if random.choice([True, False]):
-                    # sometimes switch the block names
-                    block1_name, block2_name = block2_name, block1_name
-                # Randomly select a question template
-                template = random.choice(touching_templates)
-                question = template.format(block1=block1_name, block2=block2_name)
-                qa_pairs.append((question, is_touching))
-        assert len(qa_pairs) == len(set(qa_pairs))
-        return qa_pairs
+        yes_to_sample = min(num_yes, num_questions // 2)
+        no_to_sample = num_questions - yes_to_sample
+        if num_no < no_to_sample:
+            print('weird case where more no than yes in the block touching')
+            no_to_sample = num_no
+            yes_to_sample = num_questions - no_to_sample
+
+        qa_pairs_yes = random.sample(yes_pairs, yes_to_sample)
+        qa_pairs_no = random.sample(no_pairs, no_to_sample)
+        qa_pairs = qa_pairs_yes + qa_pairs_no
+        if yes_to_sample == 0:
+            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
+        else:
+            weights = [.5 / yes_to_sample] * yes_to_sample + [.5 / no_to_sample] * no_to_sample
+        # Normalize weights
+        assert len(qa_pairs) == num_questions
+        return qa_pairs#, weights
+
 
     def get_relative_block2block_questions(self, number_of_questions=5, scale=1.3):
+        blocks, ids_to_names = self._get_visible_block_list()
         rel_position_templates = [
             "Is the {block1} {direction} {block2}?",
             "Can you confirm if the {block1} block is {direction} {block2} block?",
@@ -150,32 +206,63 @@ class LanguageTableDataGeneration(LanguageTable):
             "Is the {block1} situated {direction} {block2}?",
             "Based on their positions, is the {block1} block {direction} {block2} block?"
         ]
-        blocks, ids_to_names = self._get_visible_block_list()
-        qa_pairs = []
-        for i in range(number_of_questions):
-            pushing_block, target_block = random.sample(blocks, 2)
-            direction = random.choice(DIRECTION_IDS)
-            target_string = random.choice(DIRECTION_SYNONYMS[direction])
-            block1_name = ids_to_names[pushing_block.obj_id].replace("_", " ")
-            block2_name = ids_to_names[target_block.obj_id].replace("_", " ")
-            # Randomly select a question template
-            template = random.choice(rel_position_templates)
-            question = template.format(block1=block1_name, direction=target_string, block2=block2_name)
+        def _get_block2block_question(block1_idx, block2_idx, get_yes):
+            first_block = blocks[block1_idx]
+            second_block = blocks[block2_idx]
+            relative_of, _ = first_block.base_pose
+            relative_to, _ = second_block.base_pose
+            block1_name = ids_to_names[first_block.obj_id].replace("_", " ")
+            block2_name = ids_to_names[second_block.obj_id].replace("_", " ")
 
-            relative_of, _ = pushing_block.base_pose
-            relative_to, _ = target_block.base_pose
             # remove the z component
             relative_of = np.array(relative_of)[:2]
             relative_to = np.array(relative_to)[:2]
 
+            if get_yes:
+                normalized_dir_vector = relative_of - relative_to
+                normalized_dir_vector /= np.linalg.norm(normalized_dir_vector)
+                direction = max(DIRECTIONS.items(), key=lambda item: normalized_dir_vector @ item[1])[0]
+            else:
+                direction = random.choice(DIRECTION_IDS)
+            target_string = random.choice(DIRECTION_SYNONYMS[direction])
+            template = random.choice(rel_position_templates)
+            question = template.format(block1=block1_name, direction=target_string, block2=block2_name)
             pushing_block_on_line = self.check_direction(relative_to, relative_of, direction, scale, question=question, viz=False)
-
-            qa_pairs.append((question, pushing_block_on_line))
+            return question, pushing_block_on_line
+        
+        n_blocks = len(blocks)
+        block_idcs = range(n_blocks)
+        qa_pairs = []
+        i_idx, j_idx = np.triu_indices(n_blocks, k=1)
+        close_idcs = np.where([self.check_in_direction_range(blocks[j].base_pose[0][:2], blocks[i].base_pose[0][:2], scale) for j, i in zip(j_idx, i_idx)])[0]
+        num_yes = min(number_of_questions // 2, len(close_idcs))
+        # generate the yes ones
+        yes_pairs = random.sample(list(close_idcs), num_yes)
+        for pair in yes_pairs:
+            i, j = (i_idx[pair], j_idx[pair]) if bool(random.getrandbits(1)) else (j_idx[pair], i_idx[pair])
+            qa_pairs.append(_get_block2block_question(i, j, get_yes=True))
+        # Get the no answers:
+        no_counter = 0
+        while len(qa_pairs) < number_of_questions:
+            no_counter += 1
+            if no_counter > 100:
+                print("REALLY CAN'T GENERATE NOS :(")
+                break
+            pushing_block, target_block = random.sample(block_idcs, 2)
+            result = _get_block2block_question(pushing_block, target_block, get_yes=False)
+            if result[1]:
+                continue
+            qa_pairs.append(result)
+        if num_yes > 0:
+            weights = [0.5/num_yes] * num_yes + [0.5 / (len(qa_pairs) - num_yes)] * (len(qa_pairs) - num_yes)
+        else:
+            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
         return qa_pairs
 
     def get_peg_block_questions(self):
         peg_templates = [
             "Is the {block} next to the peg?",
+            "Is the peg next to the {block}?"
             "Is the {block} touching the peg?",
             "Is the {block} block near the peg?",
             "Is the peg adjacent to the {block}?",
@@ -183,7 +270,9 @@ class LanguageTableDataGeneration(LanguageTable):
         ]
 
         blocks, ids_to_names = self._get_visible_block_list()
+
         qa_pairs = []
+        trues = 0
         for block in blocks:
             block_position, _ = block.base_pose
             block_position = np.array(block_position)[:2]
@@ -202,26 +291,16 @@ class LanguageTableDataGeneration(LanguageTable):
             template = random.choice(peg_templates)
             question = template.format(block=block_name)
             qa_pairs.append((question, answer))
+            trues += 1 if answer else 0
+        qa_pairs.sort(key=lambda pair: pair[1])
+        if not trues:
+            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
+        else:
+            weights = [0.5/trues] * trues + [0.5/(len(qa_pairs) - trues)] * (len(qa_pairs) - trues)
         return qa_pairs
 
-    def get_block_peg_info(self):
-        blocks, ids_to_names = self._get_visible_block_list()
-        result = {}
-        for block in blocks:
-            block_position, _ = block.base_pose
-            block_position = np.array(block_position)[:2]
 
-            state = self._compute_state()
-
-            dist = np.linalg.norm(
-                np.array(block_position) -
-                np.array(state['effector_target_translation']))
-
-            result[ids_to_names[block.obj_id]] = dist
-
-        return result
-
-    def get_block_to_board_questions(self, number_of_questions=5):
+    def get_block_to_board_questions(self, number_of_questions=8):
         board_templates = [
             "Is the {block} in the {location} of the board?",
             "Is the {block} block located in the {location} area?",
@@ -229,16 +308,10 @@ class LanguageTableDataGeneration(LanguageTable):
             "Is the {block} block situated in the {location} of the board?",
             "Does the {block} occupy the {location} area of the board?"
         ]
-
         blocks, ids_to_names = self._get_visible_block_list()
-        qa_pairs = []
-        for i in range(number_of_questions):
-            block = random.choice(blocks)
+        def _get_block_to_board_question(block, target_translation):
             block_position, _ = block.base_pose
             block_position = np.array(block_position)[:2]
-
-            target_translation = random.choice(list(ABSOLUTE_LOCATIONS.keys()))
-
             dist = np.linalg.norm(
                 np.array(block_position) - np.array(ABSOLUTE_LOCATIONS[target_translation]))
 
@@ -255,7 +328,43 @@ class LanguageTableDataGeneration(LanguageTable):
             # Randomly select a question template
             template = random.choice(board_templates)
             question = template.format(block=block_name, location=location)
-            qa_pairs.append((question, success))
+            return question, success
+
+        qa_pairs = []
+        block_positions = np.array([block.base_pose[0][:2] for block in blocks])
+        dists = np.linalg.norm(
+            block_positions[:, None, :] - np.array(ABSOLUTE_LOCATIONS_POSES)[None, :, :],
+            axis=2
+        )
+        closest_indices = np.argmin(dists, axis=1)
+        closest_positions = [ABSOLUTE_LOCATIONS_IDS[i] for i in closest_indices]
+        closest_distances = [dists[i, closest_indices[i]] for i in range(len(block_positions))]
+        accurate_blocks = np.where(
+            [closest_distances[i] <
+             (BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE if "center" in closest_positions[i] else BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE)
+                for i in range(len(closest_positions))])[0]
+        num_yes = min(number_of_questions // 2, len(accurate_blocks))
+        yes_idxs = random.sample(list(accurate_blocks), num_yes)
+        for idx in yes_idxs:
+            block = blocks[idx]
+            direction = closest_positions[idx]
+            pair = _get_block_to_board_question(block, direction)
+            assert pair[1]
+            qa_pairs.append(pair)
+        while len(qa_pairs) < number_of_questions:
+            block = random.choice(blocks)
+            idx = blocks.index(block)
+            direction = random.choice(ABSOLUTE_LOCATIONS_IDS)
+            if closest_positions[idx] == direction:
+                continue
+            pair = _get_block_to_board_question(block, direction)
+            if pair[1]:
+                continue
+            qa_pairs.append(pair)
+        if num_yes > 0:
+            weights = [.5/num_yes] * num_yes + [.5/(len(qa_pairs) - num_yes)] * (len(qa_pairs) - num_yes)
+        else:
+            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
         return qa_pairs
 
     def get_peg_relative_to_block_questions(self, number_of_questions=5, scale=1.3):
@@ -270,14 +379,21 @@ class LanguageTableDataGeneration(LanguageTable):
         ]
 
         blocks, ids_to_names = self._get_visible_block_list()
+        block_idxs = list(range(len(blocks)))
         state = self._compute_state()
         peg_position = np.array(state['effector_target_translation'])
+        def _get_peg_rel_question(block_idx, get_yes):
+            target_block = blocks[block_idx]
+            target_block_translation, _ = target_block.base_pose
+            target_block_translation = np.array(target_block_translation)[:2]
 
-        qa_pairs = []
-        for i in range(number_of_questions):
-            # Select a random block
-            target_block = random.choice(blocks)
-            direction = random.choice(DIRECTION_IDS)
+            if get_yes:
+                normalized_dir_vector = peg_position - target_block_translation
+                normalized_dir_vector /= np.linalg.norm(normalized_dir_vector)
+                direction = max(DIRECTIONS.items(), key=lambda item: normalized_dir_vector @ item[1])[0]
+            else:
+                direction = random.choice(DIRECTION_IDS)
+
             target_string = random.choice(DIRECTION_SYNONYMS[direction])
             # Get block name
             block_name = ids_to_names[target_block.obj_id].replace("_", " ")
@@ -286,20 +402,25 @@ class LanguageTableDataGeneration(LanguageTable):
             template = random.choice(peg_rel_templates)
             question = template.format(direction=target_string, block=block_name)
 
-            target_block_translation, _ = target_block.base_pose
-            # Remove the z component
-            target_block_translation = np.array(target_block_translation)[:2]
 
             peg_on_line = self.check_direction(target_block_translation, peg_position, direction, scale, question=question, viz=False)
 
-            qa_pairs.append((question, peg_on_line))
+            return question, peg_on_line
+        qa_pairs = []
+
+        close_idcs = np.where(
+            [self.check_in_direction_range(blocks[i].base_pose[0][:2], peg_position, scale) for i in range(len(blocks))])[0]
+        num_yes = min(number_of_questions // 2, len(close_idcs))
+        yes_idxs = random.sample(list(close_idcs), num_yes)
+        for idx in yes_idxs:
+            qa_pairs.append(_get_peg_rel_question(idx, get_yes=True))
+
+        while len(qa_pairs) < number_of_questions:
+            idx = random.choice(block_idxs)
+            qa_pairs.append(_get_peg_rel_question(idx, False))
+        if num_yes > 0:
+            weights = [0.5/num_yes] * num_yes + [0.5/(len(qa_pairs)-num_yes)] * (len(qa_pairs) - num_yes)
+        else:
+            weights = [1.0/len(qa_pairs)] * len(qa_pairs)
         return qa_pairs
 
-    def get_block_states(self):
-        blocks, ids_to_names = self._get_visible_block_list()
-        state = self._compute_state()
-        block_positions = {ids_to_names[obj.obj_id]: np.array(obj.base_pose[0])[:2] for obj in blocks}
-        # GET THE PEG POSE
-        block_positions["peg"] = np.array(state['effector_target_translation'])
-
-        return block_positions

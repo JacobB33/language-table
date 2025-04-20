@@ -24,7 +24,7 @@ import numpy as np
 
 
 # Blocks are in need of 'separation' if they are at least this close together.
-CONSIDERED_JOINED_THRESHOLD = 0.08  # was 0.05
+CONSIDERED_JOINED_THRESHOLD = 0.05  # was 0.05
 
 # How much to move in opposite direction.
 MAGNITUDE = 0.1
@@ -32,7 +32,7 @@ MAGNITUDE = 0.1
 # Consider task solved when we are this far away from invisible target.
 DISTANCE_TO_TARGET_THRESHOLD = 0.025
 
-MIN_DIST_AWAY_FROM_AVOID_BLOCKS = .06
+MIN_DIST_AWAY_FROM_AVOID_BLOCKS = .1
 
 
 SEPARATE_TEMPLATES = [

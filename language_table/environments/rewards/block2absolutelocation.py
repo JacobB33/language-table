@@ -69,7 +69,29 @@ ABSOLUTE_LOCATIONS = {
     'bottom_left': [X_MAX, Y_MIN],
     'bottom_right': [X_MAX, Y_MAX],
 }
+ABSOLUTE_LOCATIONS_IDS = [
+    'top',
+    'top_left',
+    'top_right',
+    'center',
+    'center_left',
+    'center_right',
+    'bottom',
+    'bottom_left',
+    'bottom_right',
+]
+ABSOLUTE_LOCATIONS_POSES = [
+    [X_MIN, CENTER_Y],
+    [X_MIN, Y_MIN],
+    [X_MIN, Y_MAX],
+    [CENTER_X, CENTER_Y],
+    [CENTER_X, Y_MIN],
+    [CENTER_X, Y_MAX],
+    [X_MAX, CENTER_Y],
+    [X_MAX, Y_MIN],
+    [X_MAX, Y_MAX],
 
+]
 LOCATION_SYNONYMS = {
     'top': ['top side', 'top', 'towards your base'],
     'top_left': ['top left of the board', 'top left',

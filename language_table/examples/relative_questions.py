@@ -4,6 +4,7 @@ import itertools
 
 from language_table.environments.rewards.block2block_relative_location import DIRECTIONS, DIRECTION_IDS, Locations, \
     DIRECTION_SYNONYMS, DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION
+from sympy import false, true
 
 RELATIVE_DISTANCE_THRESHOLD = .04
 
@@ -40,28 +41,40 @@ def generate_block_move_direction_questions(past_states, current_states, num_que
         "Did the {block} travel {direction}?",
         "Has the {block} been pushed {direction}?"
     ]
+    def _get_move_direction_q(block, direction, old_position, new_position):
+        block_name = block.replace('_', ' ')
+        direction_string = random.choice(DIRECTION_SYNONYMS[direction])
+        moved_in_direction = did_obj_move_direction(old_position, new_position, direction)
+        # Randomly select a question template
+        template = random.choice(direction_movement_templates)
+        question = template.format(block=block_name, direction=direction_string)
+        return question, moved_in_direction
 
     qa_pairs = []
     keys = list(past_states.keys())
     del keys[keys.index('peg')]
-    for _ in range(num_questions):
-        block = random.choice(keys)
-
+    distances = [np.linalg.norm(past_states[block] - current_states[block]) for block in keys]
+    moved_idxs = np.where(np.array(distances) > RELATIVE_DISTANCE_THRESHOLD)[0]
+    yes_questions = min(len(moved_idxs), num_questions // 2)
+    for idx in random.sample(moved_idxs.tolist(), yes_questions):
+        block = keys[idx]
         old_position = past_states[block]
         new_position = current_states[block]
-        block_name = block.replace('_', ' ')
-
+        normalized_position = (new_position - old_position) / np.linalg.norm(new_position - old_position)
+        closest_direction = max(DIRECTION_IDS, key=lambda x: np.dot(normalized_position, np.array(DIRECTIONS[x])))
+        question, answer = _get_move_direction_q(block, closest_direction, old_position, new_position)
+        qa_pairs.append((question, answer))
+    
+    while len(qa_pairs) < num_questions:
+        block = random.choice(keys)
+        old_position = past_states[block]
+        new_position = current_states[block]
         direction = random.choice(list(DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION.keys()))
-        direction_string = random.choice(DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION[direction])
-
-        # Check if the block moved in this direction
-        moved_in_direction = did_obj_move_direction(old_position, new_position, direction)
-
-        # Randomly select a question template
-        template = random.choice(direction_movement_templates)
-        question = template.format(block=block_name, direction=direction_string)
-
-        qa_pairs.append((question, moved_in_direction))
+        question, answer = _get_move_direction_q(block, direction, old_position, new_position)
+        if answer:
+            pass
+        
+        qa_pairs.append((question, answer))
 
     return qa_pairs
 
@@ -93,14 +106,20 @@ def generate_peg_move_questions(past_states, current_states):
         question = template.format(peg=peg_name, direction=direction_string)
 
         qa_pairs.append((question, moved_in_direction))
+        
+    # sample one true and one false question
+    true = [qa for qa in qa_pairs if qa[1]]
+    if len(true) == 0:
+        true_question = random.choice(qa_pairs)
+    else:
+        true_question = random.choice(true)
+    false_question = random.choice([qa for qa in qa_pairs if not qa[1]])
 
-    return qa_pairs
-
-
-
+    return [true_question, false_question]
 
 
 def generate_relative_peg_block_questions(past_states, current_states):
+    # I want to not reballence this because I think that naturally this would be around 50/50
     prev_peg, cur_peg = past_states["peg"], current_states['peg']
     qa_pairs = []
     question_templates = [
@@ -157,8 +176,8 @@ def generate_did_block_move_questions(past_states, current_states):
 def generate_relative_block_block_questions(past_states, current_states, num_questions):
     qa_pairs = []
     keys = list(past_states.keys())
-    unique_pairs = set(tuple(sorted(pair)) for pair in itertools.combinations(keys, 2))
-    pairs = random.sample(unique_pairs, min(num_questions, len(unique_pairs)))
+    pairs = set(tuple(sorted(pair)) for pair in itertools.combinations(keys, 2))
+    # pairs = random.sample(unique_pairs, min(num_questions, len(unique_pairs)))
 
     question_templates = [
         "Are the {block1} and {block2} closer together?",
@@ -181,7 +200,14 @@ def generate_relative_block_block_questions(past_states, current_states, num_que
         )
         answer = new_distance < old_distance - RELATIVE_DISTANCE_THRESHOLD
         qa_pairs.append((question, answer))
-    return qa_pairs
+    
+    true_pairs = [qa for qa in qa_pairs if qa[1]]
+    false_pairs = [qa for qa in qa_pairs if not qa[1]]
+    num_true =  min(len(true_pairs), num_questions // 2)
+    true_pairs = random.sample(true_pairs, num_true)
+    false_pairs = random.sample(false_pairs, num_questions - num_true)
+    
+    return true_pairs + false_pairs
 
 # CLaude generated viz function with minior edits. Ignore if you do not need
 def visualize_block_move_direction(env, previous_image, current_image, past_states, current_states, num_questions=3):
