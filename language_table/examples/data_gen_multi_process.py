@@ -77,13 +77,18 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
     actions = []
     observations = [ts]
     block_states = [env.get_block_states()]
-    qa_pairs = [
-        random.sample(env.get_block_touching_questions(), 8) +
-        env.get_relative_block2block_questions(number_of_questions=8) +
-        env.get_peg_block_questions() + # there are 8 of them
-        env.get_block_to_board_questions(number_of_questions=8)
-    ]
+    qa_pairs = []
+    weights = []
+    to_add =  [env.get_block_touching_questions(),
+                    env.get_relative_block2block_questions(number_of_questions=8),
+                    env.get_peg_block_questions(), # there are 8 of them
+                    env.get_block_to_board_questions(number_of_questions=8)]
+    
+    qa_pairs.append([q for q_set, _ in to_add for q in q_set])
+    # Flatten and collect all weights
+    weights.append([w for _, w_set in to_add for w in w_set])
 
+        
     episode_steps = 0
     while not ts.is_last():
         raw_state = env.compute_state()
@@ -98,13 +103,14 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         frames.append((ts.observation["rgb"][0] * 255).astype(np.uint8))
         actions.append(policy_step)
         observations.append(ts)
-        qa_pairs.append(
-            random.sample(env.get_block_touching_questions(), 8) +
-            env.get_relative_block2block_questions(number_of_questions=8) +
-            env.get_peg_block_questions() + # there are 8 of them
-            env.get_block_to_board_questions(number_of_questions=8) +
-            env.get_peg_relative_to_block_questions(number_of_questions=8)
-        )
+        to_add =  [env.get_block_touching_questions(),
+                        env.get_relative_block2block_questions(number_of_questions=8),
+                        env.get_peg_block_questions(), # there are 8 of them
+                        env.get_block_to_board_questions(number_of_questions=8)]
+        
+        qa_pairs.append([q for q_set, _ in to_add for q in q_set])
+        # Flatten and collect all weights
+        weights.append([w for _, w_set in to_add for w in w_set])
         block_states.append(env.get_block_states())
 
         episode_steps += 1
@@ -132,6 +138,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         "observations": observations,
         "frames": frames,
         "qa_pairs": qa_pairs,
+        "weights": weights,
         "block_states": block_states
     }
     trajectory_path = os.path.join(workdir, "demos/", f"{reward_name}_{ep_num}_{success_str}.pkl")

@@ -75,8 +75,11 @@ def generate_block_move_direction_questions(past_states, current_states, num_que
             pass
         
         qa_pairs.append((question, answer))
-
-    return qa_pairs
+    if yes_questions > 0:
+        weights = [.5 / yes_questions] * yes_questions + [0.5 / (num_questions - yes_questions)] * (num_questions - yes_questions)
+    else:
+        weights = [0] * num_questions
+    return qa_pairs, weights
 
 
 
@@ -110,12 +113,14 @@ def generate_peg_move_questions(past_states, current_states):
     # sample one true and one false question
     true = [qa for qa in qa_pairs if qa[1]]
     if len(true) == 0:
+        weights = [0, 0]
         true_question = random.choice(qa_pairs)
     else:
         true_question = random.choice(true)
+        weights = [0.5, 0.5]
     false_question = random.choice([qa for qa in qa_pairs if not qa[1]])
 
-    return [true_question, false_question]
+    return [true_question, false_question], weights
 
 
 def generate_relative_peg_block_questions(past_states, current_states):
@@ -138,7 +143,14 @@ def generate_relative_peg_block_questions(past_states, current_states):
         question = random.choice(question_templates).format(block=block.replace("_", " "))
         answer = new_peg_to_block < old_peg_to_block - RELATIVE_DISTANCE_THRESHOLD
         qa_pairs.append((question, answer))
-    return qa_pairs
+    qa_pairs.sort(key=lambda x: x[1])
+    num_true = sum(1 for _, answer in qa_pairs if answer)
+    num_false = len(qa_pairs) - num_true
+    if num_true > 0 and num_false > 0:
+        weights = [0.5 / num_true] * num_true + [0.5 / num_false] * num_false
+    else:
+        weights = [0] * len(qa_pairs)
+    return qa_pairs, weights
 
 
 
@@ -171,7 +183,14 @@ def generate_did_block_move_questions(past_states, current_states):
         if "still in the same place" in question or "remain stationary" in question:
             answer = not answer
         qa_pairs.append((question, answer))
-    return qa_pairs
+    qa_pairs.sort(key=lambda x: x[1])
+    num_true = sum(1 for _, answer in qa_pairs if answer)
+    num_false = len(qa_pairs) - num_true
+    if num_true > 0 and num_false > 0:
+        weights = [0.5 / num_true] * num_true + [0.5 / num_false] * num_false
+    else:
+        weights = [0] * len(qa_pairs)
+    return qa_pairs, weights
 
 def generate_relative_block_block_questions(past_states, current_states, num_questions):
     qa_pairs = []
@@ -184,6 +203,7 @@ def generate_relative_block_block_questions(past_states, current_states, num_que
         "Have the {block1} and {block2} moved closer to each other?",
         "Did the distance between {block1} and {block2} decrease?",
         "Are the {block1} and {block2} nearer than before?"
+        "Is {block1} closer to the {block2}?"
     ]
 
     for pair in pairs:
@@ -206,8 +226,13 @@ def generate_relative_block_block_questions(past_states, current_states, num_que
     num_true =  min(len(true_pairs), num_questions // 2)
     true_pairs = random.sample(true_pairs, num_true)
     false_pairs = random.sample(false_pairs, num_questions - num_true)
-    
-    return true_pairs + false_pairs
+    final_pairs = true_pairs + false_pairs
+
+    if num_true > 0:
+        weights = [0.5 / num_true] * num_true + [0.5 / (len(final_pairs) - num_true)] * (len(final_pairs) - num_true)
+    else:
+        weights = [0] * len(final_pairs)
+    return final_pairs, weights
 
 # CLaude generated viz function with minior edits. Ignore if you do not need
 def visualize_block_move_direction(env, previous_image, current_image, past_states, current_states, num_questions=3):

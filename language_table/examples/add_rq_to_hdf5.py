@@ -39,8 +39,9 @@ def process_one_file(config, file_path):
     qa_horizons = []
     for i in range(len(data['observations'])-10):
         # sample horizons using a beta distribution that
-        horizons = (np.random.beta(config.alpha, config.beta, config.num_horizon_samples)
-                    *  min(config.max_horizon, len(data['observations']) - i - 1))
+        # horizons = (np.random.beta(config.alpha, config.beta, config.num_horizon_samples)
+        #             *  min(config.max_horizon, len(data['observations']) - i - 1))
+        horizons = np.random.uniform(0, len(data['observations']) - i - 1, config.num_horizon_samples)
 
         horizons = set(round(h) for h in horizons)
         hdict = {}
@@ -48,19 +49,29 @@ def process_one_file(config, file_path):
             previous_poses = data['block_states'][i]
             final_poses = data['block_states'][i+horizon]
             questions: List = copy(data['qa_pairs'][i+horizon])
-            # now generate the relative questions
-            questions.extend(
-                generate_relative_block_block_questions(past_states=previous_poses,current_states=final_poses, num_questions=8) +
-                generate_relative_peg_block_questions(past_states=previous_poses, current_states=final_poses) +
-                generate_block_move_direction_questions(past_states=previous_poses, current_states=final_poses, num_questions=8) +
-                generate_did_block_move_questions(past_states=previous_poses, current_states=final_poses) +
-                generate_peg_move_questions(past_states=previous_poses, current_states=final_poses)
-            )
+            weights: List = copy(data['weights'][i+horizon])
+            if horizon > 0:
+                to_add = [
+                    generate_relative_block_block_questions(past_states=previous_poses,current_states=final_poses, num_questions=8),
+                    generate_relative_peg_block_questions(past_states=previous_poses, current_states=final_poses),
+                    generate_block_move_direction_questions(past_states=previous_poses, current_states=final_poses, num_questions=8),
+                    generate_did_block_move_questions(past_states=previous_poses, current_states=final_poses),
+                    generate_peg_move_questions(past_states=previous_poses, current_states=final_poses)
+                ]
+                questions.extend(
+                    [x for question_list, _ in to_add for x in question_list]
+                )
+                weights.extend(
+                    [x for _, weights in to_add for x in weights]
+                )
+            w_sum = sum(weights)
             hdict[horizon] = {
                 'start_idx': i,
                 'end_idx': i + horizon,
                 'questions': questions,
+                'weights': [w / w_sum for w in weights],
             }
+            assert len(hdict[horizon]['questions']) == len(hdict[horizon]['weights']), f"{i}: {len(hdict[horizon]['questions'])} {len(hdict[horizon]['weights'])}"
         qa_horizons.append(hdict)
     frames = data['frames']
     actions = data['actions']
@@ -90,6 +101,7 @@ def save_data(config, processed_data_list):
                     qs = [x[0] for x in qa_horizon_dict["questions"]]
                     answers = [x[1] for x in qa_horizon_dict["questions"]]
                     specific_grp.create_dataset("questions", data=qs)
+                    specific_grp.create_dataset("weights", data=qa_horizon_dict['weights'])
                     specific_grp.create_dataset("answers", data=answers)
                     specific_grp.create_dataset("start_idx", data=qa_horizon_dict['start_idx'])
                     specific_grp.create_dataset("end_idx", data=qa_horizon_dict['end_idx'])

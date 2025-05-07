@@ -187,12 +187,12 @@ class LanguageTableDataGeneration(LanguageTable):
         qa_pairs_no = random.sample(no_pairs, no_to_sample)
         qa_pairs = qa_pairs_yes + qa_pairs_no
         if yes_to_sample == 0:
-            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
+            weights = [0] * len(qa_pairs)
         else:
             weights = [.5 / yes_to_sample] * yes_to_sample + [.5 / no_to_sample] * no_to_sample
-        # Normalize weights
-        assert len(qa_pairs) == num_questions
-        return qa_pairs#, weights
+        assert len(weights) == len(qa_pairs), f"Weight length mismatch in block_touching: {len(weights)} weights for {len(qa_pairs)} questions"
+
+        return qa_pairs, weights
 
 
     def get_relative_block2block_questions(self, number_of_questions=5, scale=1.3):
@@ -256,8 +256,9 @@ class LanguageTableDataGeneration(LanguageTable):
         if num_yes > 0:
             weights = [0.5/num_yes] * num_yes + [0.5 / (len(qa_pairs) - num_yes)] * (len(qa_pairs) - num_yes)
         else:
-            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
-        return qa_pairs
+            weights = [0] * len(qa_pairs)
+        assert len(weights) == len(qa_pairs), f"Weight length mismatch in relative_block2block: {len(weights)} weights for {len(qa_pairs)} questions"
+        return qa_pairs, weights
 
     def get_peg_block_questions(self):
         peg_templates = [
@@ -294,10 +295,11 @@ class LanguageTableDataGeneration(LanguageTable):
             trues += 1 if answer else 0
         qa_pairs.sort(key=lambda pair: pair[1])
         if not trues:
-            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
+            weights = [0] * len(qa_pairs)
         else:
             weights = [0.5/trues] * trues + [0.5/(len(qa_pairs) - trues)] * (len(qa_pairs) - trues)
-        return qa_pairs
+        assert len(weights) == len(qa_pairs), f"Weight length mismatch in peg_block: {len(weights)} weights for {len(qa_pairs)} questions"
+        return qa_pairs, weights
 
 
     def get_block_to_board_questions(self, number_of_questions=8):
@@ -364,8 +366,11 @@ class LanguageTableDataGeneration(LanguageTable):
         if num_yes > 0:
             weights = [.5/num_yes] * num_yes + [.5/(len(qa_pairs) - num_yes)] * (len(qa_pairs) - num_yes)
         else:
-            weights = [1.0 / len(qa_pairs)] * len(qa_pairs)
-        return qa_pairs
+            weights = [0] * len(qa_pairs)
+        
+        assert len(weights) == len(qa_pairs), f"Weight length mismatch in block_to_board: {len(weights)} weights for {len(qa_pairs)} questions"
+
+        return qa_pairs, weights
 
     def get_peg_relative_to_block_questions(self, number_of_questions=5, scale=1.3):
         # Define various question templates for the peg relative to block questions
@@ -421,6 +426,7 @@ class LanguageTableDataGeneration(LanguageTable):
         if num_yes > 0:
             weights = [0.5/num_yes] * num_yes + [0.5/(len(qa_pairs)-num_yes)] * (len(qa_pairs) - num_yes)
         else:
-            weights = [1.0/len(qa_pairs)] * len(qa_pairs)
-        return qa_pairs
+            weights = [0.0] * len(qa_pairs)
+        assert len(weights) == len(qa_pairs), f"Weight length mismatch in block_to_board: {len(weights)} weights for {len(qa_pairs)} questions"
+        return qa_pairs, weights
 
