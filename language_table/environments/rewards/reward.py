@@ -25,9 +25,10 @@ class LanguageTableReward(object):
   """Base class for all 2d board rewards."""
 
   def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode):
+               block_mode, block_combo):
     self._block_mode = block_mode
     self._goal_reward = goal_reward
+    self._block_combo = block_combo
     self._rng = rng
     # TODO(tding): Handle this in all rewards
     self._delay_reward_steps = delay_reward_steps
@@ -59,9 +60,10 @@ class LanguageTableReward(object):
     return block
 
   def _sample_objects(self, blocks_on_table):
-    """Randomly sample two objects."""
-    start_block, target_block = self._rng.choice(
-        blocks_on_table, 2, replace=False)
+    # """Randomly sample two objects."""
+    # start_block, target_block = self._rng.choice(
+    #     blocks_on_table, 2, replace=False)
+    start_block, target_block = self._block_combo
     return start_block, target_block
 
 

@@ -46,6 +46,7 @@ class LanguageTable(gym.Env):
 
   def __init__(self,
                block_mode,
+               block_combo,
                training=True,
                reward_factory=None,
                control_frequency=10.0,
@@ -133,7 +134,8 @@ class LanguageTable(gym.Env):
           goal_reward=100.0,
           rng=self._rng,
           delay_reward_steps=delay_reward_steps,
-          block_mode=block_mode)
+          block_mode=block_mode,
+          block_combo=block_combo)
 
     self.action_space = spaces.Box(low=-0.1, high=0.1, shape=(2,))  # x, y
     # Recreate the observation space after creating the reward.
