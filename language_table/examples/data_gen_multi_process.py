@@ -34,7 +34,8 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         block_mode=config.block_mode,
         reward_factory=reward_factory,
         seed=ep_num + config.seed_offset,  # Ensure different seeds per worker
-        delay_reward_steps = 5
+        delay_reward_steps = 5,
+        block_combo=config.block_combo,
     )
     env = gym_wrapper.GymWrapper(env)
     # env = env_wrappers.ClipTokenWrapper(env)
@@ -125,7 +126,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         if not config.random:
             # this episode failed so we want to generate a new one. If we are in random mode, we want to keep the episode.
             return False
-    if config.save_video:
+    if config.save_video and ep_num == 0:
         # Write out video of rollout.
         video_path = os.path.join(workdir, "videos/", f"{reward_name}_{ep_num}_{success_str}.mp4")
         mediapy_lib.write_video(video_path, frames, fps=10)
