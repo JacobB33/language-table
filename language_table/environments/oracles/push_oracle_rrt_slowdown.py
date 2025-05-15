@@ -39,7 +39,7 @@ EE_BACKOFF_OFFSETS = [0.06, 0.07, 0.08]
 # determines collisions.
 RRT_COLLISION_THRESHOLD = 0.015  # aka `delta`.
 # Size of each rrt step.
-RRT_STEP_LENGTH = 0.05
+RRT_STEP_LENGTH = 0.1 # x2
 # How often rrt samples the end goal instead of a random goal.
 RRT_GOAL_SAMPLE_RATE = 0.1
 # Search radius when expanding node tree.
@@ -58,7 +58,7 @@ BEYOND_TABLE_THRESHOLD = 2.0
 
 # Configs for end effector RRT planning.
 EE_RRT_STEP_LENGTH = 0.025
-EE_RRT_DELTA = 0.01
+EE_RRT_DELTA = 0.02 # x2
 EE_RRT_OBSTACLE_RADIUS = 0.02
 EE_RRT_ITER_MAX = 2048
 RETRY_FOR_NEW_EE_PLAN_EVERY = 1
