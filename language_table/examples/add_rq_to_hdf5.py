@@ -41,7 +41,7 @@ def process_one_file(config, file_path):
         # sample horizons using a beta distribution that
         # horizons = (np.random.beta(config.alpha, config.beta, config.num_horizon_samples)
         #             *  min(config.max_horizon, len(data['observations']) - i - 1))
-        horizons = np.random.uniform(0, len(data['observations']) - i - 1, config.num_horizon_samples)
+        horizons = np.random.uniform(0, min(len(data['observations']) - i - 1, config.max_horizon), config.num_horizon_samples)
 
         horizons = set(round(h) for h in horizons)
         hdict = {}
