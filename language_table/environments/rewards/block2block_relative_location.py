@@ -154,18 +154,14 @@ DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION = {
              'left', 'leftwards' ],
     'right': ['to the right', 'towards the right',
               'right', 'rightwards'],
-    'diagonal_up_left': ['to the top left side of the',
-                         'to the top left of the',
-                         'diagonally up and to the left of the'],
-    'diagonal_up_right': ['to the top right side of the',
-                          'to the top right of the',
-                          'diagonally up and to the right of the'],
-    'diagonal_down_left': ['to the bottom left side of the',
-                           'to the bottom left of the',
-                           'diagonally down and to the left of the'],
-    'diagonal_down_right': ['to the bottom right side of the',
-                            'to the bottom right of the',
-                            'diagonally down and to the right of the'],
+    'diagonal_up_left': ['to the top left',
+                         'diagonally up and to the left'],
+    'diagonal_up_right': ['to the top right',
+                          'diagonally up and to the right'],
+    'diagonal_down_left': ['to the bottom left',
+                           'diagonally down and to the left'],
+    'diagonal_down_right': ['to the bottom right side',
+                            'diagonally down and to the right'],
 }
 
 
@@ -190,9 +186,9 @@ class BlockToBlockRelativeLocationReward(base_reward.LanguageTableReward):
   """Calculates reward/instructions for 'push block to relative location'."""
 
   def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode):
+               block_mode, block_combo):
     super(BlockToBlockRelativeLocationReward,
-          self).__init__(goal_reward, rng, delay_reward_steps, block_mode)
+          self).__init__(goal_reward, rng, delay_reward_steps, block_mode, block_combo)
     self._target_block = None
     self._block = None
     self._direction = None

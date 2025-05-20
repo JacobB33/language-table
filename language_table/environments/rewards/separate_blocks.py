@@ -80,9 +80,9 @@ class SeparateBlocksReward(base_reward.LanguageTableReward):
   """Calculates reward/instructions for 'separate block from block(s)'."""
 
   def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode):
+               block_mode, block_combo):
     super(SeparateBlocksReward, self).__init__(goal_reward, rng,
-                                               delay_reward_steps, block_mode)
+                                               delay_reward_steps, block_mode, block_combo)
     self._instruction = None
     self._block = None
     self._avoid_blocks = None

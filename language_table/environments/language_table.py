@@ -46,7 +46,7 @@ class LanguageTable(gym.Env):
 
   def __init__(self,
                block_mode,
-               block_combo,
+               block_combo=None,
                training=True,
                reward_factory=None,
                control_frequency=10.0,

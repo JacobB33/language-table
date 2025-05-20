@@ -43,7 +43,7 @@ def generate_block_move_direction_questions(past_states, current_states, num_que
     ]
     def _get_move_direction_q(block, direction, old_position, new_position):
         block_name = block.replace('_', ' ')
-        direction_string = random.choice(DIRECTION_SYNONYMS[direction])
+        direction_string = random.choice(DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION[direction])
         moved_in_direction = did_obj_move_direction(old_position, new_position, direction)
         # Randomly select a question template
         template = random.choice(direction_movement_templates)
@@ -63,7 +63,7 @@ def generate_block_move_direction_questions(past_states, current_states, num_que
         normalized_position = (new_position - old_position) / np.linalg.norm(new_position - old_position)
         closest_direction = max(DIRECTION_IDS, key=lambda x: np.dot(normalized_position, np.array(DIRECTIONS[x])))
         question, answer = _get_move_direction_q(block, closest_direction, old_position, new_position)
-        qa_pairs.append((question, answer))
+        qa_pairs.append((question, answer, "blockmovedirection"))
     
     while len(qa_pairs) < num_questions:
         block = random.choice(keys)
@@ -74,7 +74,7 @@ def generate_block_move_direction_questions(past_states, current_states, num_que
         if answer:
             pass
         
-        qa_pairs.append((question, answer))
+        qa_pairs.append((question, answer,  "blockmovedirection"))
     if yes_questions > 0:
         weights = [.5 / yes_questions] * yes_questions + [0.5 / (num_questions - yes_questions)] * (num_questions - yes_questions)
     else:
@@ -108,7 +108,7 @@ def generate_peg_move_questions(past_states, current_states):
         template = random.choice(direction_movement_templates)
         question = template.format(peg=peg_name, direction=direction_string)
 
-        qa_pairs.append((question, moved_in_direction))
+        qa_pairs.append((question, moved_in_direction, "pegmovedirection"))
         
     # sample one true and one false question
     true = [qa for qa in qa_pairs if qa[1]]
@@ -142,9 +142,9 @@ def generate_relative_peg_block_questions(past_states, current_states):
         new_peg_to_block = np.linalg.norm(new_block - cur_peg)
         question = random.choice(question_templates).format(block=block.replace("_", " "))
         answer = new_peg_to_block < old_peg_to_block - RELATIVE_DISTANCE_THRESHOLD
-        qa_pairs.append((question, answer))
+        qa_pairs.append((question, answer, "pegblockrealtive"))
     qa_pairs.sort(key=lambda x: x[1])
-    num_true = sum(1 for _, answer in qa_pairs if answer)
+    num_true = sum(1 for _, answer, _ in qa_pairs if answer)
     num_false = len(qa_pairs) - num_true
     if num_true > 0 and num_false > 0:
         weights = [0.5 / num_true] * num_true + [0.5 / num_false] * num_false
@@ -182,9 +182,9 @@ def generate_did_block_move_questions(past_states, current_states):
         # Adjust answer for negated questions
         if "still in the same place" in question or "remain stationary" in question:
             answer = not answer
-        qa_pairs.append((question, answer))
+        qa_pairs.append((question, answer, "blockmoved"))
     qa_pairs.sort(key=lambda x: x[1])
-    num_true = sum(1 for _, answer in qa_pairs if answer)
+    num_true = sum(1 for _, answer, _ in qa_pairs if answer)
     num_false = len(qa_pairs) - num_true
     if num_true > 0 and num_false > 0:
         weights = [0.5 / num_true] * num_true + [0.5 / num_false] * num_false
@@ -219,7 +219,7 @@ def generate_relative_block_block_questions(past_states, current_states, num_que
             block2=block2_name.replace("_", " ")
         )
         answer = new_distance < old_distance - RELATIVE_DISTANCE_THRESHOLD
-        qa_pairs.append((question, answer))
+        qa_pairs.append((question, answer, "blockCloser"))
     
     true_pairs = [qa for qa in qa_pairs if qa[1]]
     false_pairs = [qa for qa in qa_pairs if not qa[1]]
@@ -358,7 +358,7 @@ def visualize_block_move_direction(env, previous_image, current_image, past_stat
                      color='green', fontsize=12, ha='center', va='center')
 
         # Generate a question about this movement
-        direction_string = random.choice(DIRECTION_SYNONYMS[best_direction])
+        direction_string = random.choice(DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION[best_direction])
         template = random.choice([
             "Did the {block} move {direction}?",
             "Has the {block} block shifted {direction}?",

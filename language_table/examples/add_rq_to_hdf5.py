@@ -100,7 +100,9 @@ def save_data(config, processed_data_list):
                     specific_grp = start_grp.create_group(f"horizon_len_{h_len}")
                     qs = [x[0] for x in qa_horizon_dict["questions"]]
                     answers = [x[1] for x in qa_horizon_dict["questions"]]
+                    types = [x[2] for x in qa_horizon_dict["questions"]]
                     specific_grp.create_dataset("questions", data=qs)
+                    specific_grp.create_dataset("types", data=types)
                     specific_grp.create_dataset("weights", data=qa_horizon_dict['weights'])
                     specific_grp.create_dataset("answers", data=answers)
                     specific_grp.create_dataset("start_idx", data=qa_horizon_dict['start_idx'])

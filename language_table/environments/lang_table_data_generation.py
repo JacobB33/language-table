@@ -168,7 +168,7 @@ class LanguageTableDataGeneration(LanguageTable):
             # Randomly select a question template
             template = random.choice(touching_templates)
             question = template.format(block1=block1_name, block2=block2_name)
-            qa_pairs.append((question, bool(is_touching[idx])))
+            qa_pairs.append((question, bool(is_touching[idx]), "block_touching"))
             
         yes_pairs = [pair for pair in qa_pairs if pair[1]]
         no_pairs = [pair for pair in qa_pairs if not pair[1]]
@@ -228,7 +228,7 @@ class LanguageTableDataGeneration(LanguageTable):
             template = random.choice(rel_position_templates)
             question = template.format(block1=block1_name, direction=target_string, block2=block2_name)
             pushing_block_on_line = self.check_direction(relative_to, relative_of, direction, scale, question=question, viz=False)
-            return question, pushing_block_on_line
+            return question, pushing_block_on_line, "blockdirblock"
         
         n_blocks = len(blocks)
         block_idcs = range(n_blocks)
@@ -291,7 +291,7 @@ class LanguageTableDataGeneration(LanguageTable):
             # Randomly select a question template
             template = random.choice(peg_templates)
             question = template.format(block=block_name)
-            qa_pairs.append((question, answer))
+            qa_pairs.append((question, answer, "pegtoblock"))
             trues += 1 if answer else 0
         qa_pairs.sort(key=lambda pair: pair[1])
         if not trues:
@@ -330,7 +330,7 @@ class LanguageTableDataGeneration(LanguageTable):
             # Randomly select a question template
             template = random.choice(board_templates)
             question = template.format(block=block_name, location=location)
-            return question, success
+            return question, success, "block2board"
 
         qa_pairs = []
         block_positions = np.array([block.base_pose[0][:2] for block in blocks])
@@ -410,7 +410,7 @@ class LanguageTableDataGeneration(LanguageTable):
 
             peg_on_line = self.check_direction(target_block_translation, peg_position, direction, scale, question=question, viz=False)
 
-            return question, peg_on_line
+            return question, peg_on_line, "pegdirblock"
         qa_pairs = []
 
         close_idcs = np.where(

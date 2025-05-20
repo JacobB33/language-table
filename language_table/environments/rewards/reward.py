@@ -61,9 +61,11 @@ class LanguageTableReward(object):
 
   def _sample_objects(self, blocks_on_table):
     # """Randomly sample two objects."""
-    # start_block, target_block = self._rng.choice(
-    #     blocks_on_table, 2, replace=False)
-    start_block, target_block = self._block_combo
+    if self._block_combo is None:
+      start_block, target_block = self._rng.choice(
+          blocks_on_table, 2, replace=False)
+    else:
+      start_block, target_block = self._block_combo
     return start_block, target_block
 
 

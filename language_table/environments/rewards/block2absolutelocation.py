@@ -135,12 +135,12 @@ class BlockToAbsoluteLocationReward(base_reward.LanguageTableReward):
   """Calculates reward/instructions for 'push block to absolute location'."""
 
   def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode):
+               block_mode, block_combo):
     super(BlockToAbsoluteLocationReward, self).__init__(
         goal_reward=goal_reward,
         rng=rng,
         delay_reward_steps=delay_reward_steps,
-        block_mode=block_mode)
+        block_mode=block_mode, block_combo=block_combo)
     self._block = None
     self._instruction = None
     self._location = None
