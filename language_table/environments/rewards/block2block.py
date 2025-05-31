@@ -114,5 +114,13 @@ class BlockToBlockReward(base_reward.LanguageTableReward):
       else:
         logging.info('In reward zone for %d steps', self._in_reward_zone_steps)
         self._in_reward_zone_steps += 1
+    
+    # if multi_task, normalize reward returned against # of tasks, then move onto next task
+    if self.multi_task:
+      reward /= len(self.block_combo)
+      self.block_combo_idx += 1
+      if self.block_combo_idx < len(self.block_combo):
+        done = False
+        self._start_block, self._target_block = self.block_combo[self.block_combo_idx]
 
     return reward, done
