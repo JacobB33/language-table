@@ -28,11 +28,11 @@ class LanguageTableReward(object):
                block_mode, block_combo):
     self._block_mode = block_mode
     self._goal_reward = goal_reward
-    self.multi_task = isinstance(block_combo[0], tuple)
-    if self.multi_task:
-      self.block_combo_idx = 0
+    self._multi_task = isinstance(block_combo[0], tuple)
+    if self._multi_task:
+      self._block_combo_idx = 0
 
-    self.block_combo = block_combo
+    self._block_combo = block_combo
 
     self._rng = rng
     # TODO(tding): Handle this in all rewards
@@ -70,8 +70,8 @@ class LanguageTableReward(object):
       start_block, target_block = self._rng.choice(
           blocks_on_table, 2, replace=False)
     else:
-      if self.multi_task:
-        start_block, target_block = self._block_combo[self.block_combo_idx]
+      if self._multi_task:
+        start_block, target_block = self._block_combo[self._block_combo_idx]
       else:
         start_block, target_block = self._block_combo
     return start_block, target_block
