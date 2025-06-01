@@ -116,7 +116,8 @@ class BlockToBlockReward(base_reward.LanguageTableReward):
         self._in_reward_zone_steps += 1
     
     # if multi_task, normalize reward returned against # of tasks, then move onto next task
-    if self._multi_task:
+    # TODO: start_block and target_block should be a list of tuples, and then calculate reward across environment. remove logic that focuses on one block at a time
+    if self._multi_task and dist < constants.TARGET_BLOCK_DISTANCE:
       reward /= len(self._block_combo)
       self._block_combo_idx += 1
       if self._block_combo_idx < len(self._block_combo):
