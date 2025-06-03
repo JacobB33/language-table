@@ -25,7 +25,7 @@ class LanguageTableReward(object):
   """Base class for all 2d board rewards."""
 
   def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode, block_combo, block=None, instruction=None):
+               block_mode, block_combo, block=None, location=None):
     self._block_mode = block_mode
     self._goal_reward = goal_reward
     self._multi_task = block_combo is not None and isinstance(block_combo[0], tuple)

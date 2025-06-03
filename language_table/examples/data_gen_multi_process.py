@@ -3,6 +3,8 @@ import os
 import pickle
 import random
 from functools import partial
+import copy
+from tqdm import tqdm
 
 import mediapy as mediapy_lib
 import numpy as np
@@ -22,6 +24,10 @@ from language_table.environments.rewards import block2block_relative_location
 from language_table.environments.rewards import block2relativelocation
 from language_table.environments.rewards import separate_blocks
 from language_table.eval import wrappers as env_wrappers
+import os
+
+n_procs = int(os.environ.get("SLURM_CPUS_PER_TASK", 1)) 
+print(f"Using {n_procs} processes")
 
 _CONFIG = config_flags.DEFINE_config_file(
     "config", "/gscratch/weirdlab/yanda/swm/language_table/examples/config_generate.py", "Training configuration.", lock_config=True)
@@ -158,36 +164,74 @@ def get_state_for_relative_questions(env: language_table.LanguageTable):
 def generate_episode_wrapper(reward_name, reward_factory, config, ep_num, max_episode_steps, workdir):
     while not generate_episode(reward_name, reward_factory, config, ep_num, max_episode_steps, workdir):
         pass
+    return True
 
-
-def generate_data(workdir, config):
+def generate_data(workdir, config, blocks=None, locations=None):
     """Evaluates the given checkpoint and writes results to workdir."""
     video_dir = os.path.join(workdir, "videos")
     if not tf.io.gfile.exists(video_dir):
         tf.io.gfile.makedirs(video_dir)
 
     rewards = {
-        # "blocktoblock": block2block.BlockToBlockReward,
         "blocktoabsolutelocation": block2absolutelocation.BlockToAbsoluteLocationReward,
-        # "blocktoblockrelativelocation": block2block_relative_location.BlockToBlockRelativeLocationReward,
-        # "blocktorelativelocation": block2relativelocation.BlockToRelativeLocationReward,
-        # "separate": separate_blocks.SeparateBlocksReward,
-        # "peg to block": point2block.PointToBlockReward,
     }
 
     num_evals_per_reward = config.num_evals_per_reward
     max_episode_steps = config.max_episode_steps
+
+    # If blocks and locations are not provided, use single default config
+    if blocks is None:
+        blocks = [config.block]
+    if locations is None:
+        locations = [config.location]
+
+    total_configs = len(rewards) * len(blocks) * len(locations) * num_evals_per_reward
+    
     if config.debug:
+        pbar = tqdm(total=total_configs, desc="Generating episodes (debug mode)")
         for reward_name, reward_factory in rewards.items():
-            for i in range(num_evals_per_reward):
-                generate_episode_wrapper(reward_name, reward_factory, config, i, max_episode_steps, workdir)
+            for block in blocks:
+                for location in locations:
+                    for i in range(num_evals_per_reward):
+                        # Create a deep copy of config with current block and location
+                        run_config = copy.deepcopy(config)
+                        run_config.block = block
+                        run_config.location = location
+                        if workdir == "empty":
+                            directory = os.path.join(run_config.save_dir, f"{block}_to_{location}")
+                            run_config.save_dir = directory
+
+                        generate_episode_wrapper(reward_name, reward_factory, run_config, i, max_episode_steps, directory)
+                        pbar.update(1)
+        pbar.close()
     else:
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        with multiprocessing.Pool(processes=n_procs) as pool:
             for reward_name, reward_factory in rewards.items():
-                worker_fn = partial(
-                    generate_episode_wrapper, reward_name, reward_factory, config, max_episode_steps=max_episode_steps, workdir=workdir
-                )
-                pool.map(worker_fn, range(num_evals_per_reward))
+                # Create all run configurations
+                run_configs = []
+                for block in blocks:
+                    for location in locations:
+                        for i in range(num_evals_per_reward):
+                            run_config = copy.deepcopy(config)
+                            run_config.block = block
+                            run_config.location = location
+                            directory = workdir
+                            if workdir == "empty":
+                                directory = os.path.join(run_config.save_dir, f"{block}_to_{location}")
+                                run_config.save_dir = directory
+
+                            # Create a tuple of arguments for each run
+                            run_configs.append((reward_name, reward_factory, run_config, i, max_episode_steps, directory))
+                
+                with tqdm(total=len(run_configs), desc=f"{reward_name}", position=0, leave=True) as pbar:
+                
+                    # Submit each job with its own callback
+                    for args in run_configs:
+                        pool.apply_async(generate_episode_wrapper, args=args, callback=lambda _: pbar.update(1))
+
+                    pool.close()
+                    pool.join()  # Wait for all tasks to finish
+                
                 logging.error("Finished reward: %s", reward_name)
 
 

@@ -15,7 +15,6 @@ combos = [
 ]
 
 block_names = [
-    'red_moon',
     'red_pentagon',
     'blue_moon',
     'blue_cube',
@@ -23,18 +22,19 @@ block_names = [
     'green_star',
     'yellow_star',
     'yellow_pentagon'
+    'red_moon',
 ]
 
 locations = [
-    'top',
-    'top_left',
-    'top_right',
     'center',
     'center_left',
     'center_right',
     'bottom',
     'bottom_left',
     'bottom_right',
+    'top_right',
+    'top_left',
+    'top',
 ]
 
 def generate_block_to_block():
@@ -55,23 +55,21 @@ def generate_block_to_block():
         generate_data(config.save_dir, config)
 
 def generate_block_to_location():
-    for block in block_names:
-        for location in locations:
-            config = ConfigDict()
-            config.num_evals_per_reward = 800
-            config.random  = False
-            config.max_episode_steps = 180
-            config.seed_offset = 0
-            config.target_height = 180
-            config.target_width = 320
-            config.block_mode = blocks.LanguageTableBlockVariants.BLOCK_8
-            config.save_video = True
-            config.debug = False
-            config.block = block
-            config.location = location
-            config.block_combo = None
-            config.save_dir = f"/gscratch/weirdlab/yanda/semantic_world_modeling/datasets/expert_diffusion/{block}_{location}"
-            generate_data(config.save_dir, config)
+    config = ConfigDict()
+    config.num_evals_per_reward = 800
+    config.random  = False
+    config.max_episode_steps = 180
+    config.seed_offset = 0
+    config.target_height = 180
+    config.target_width = 320
+    config.block_mode = blocks.LanguageTableBlockVariants.BLOCK_8
+    config.save_video = True
+    config.debug = False
+    config.block = None
+    config.location = None
+    config.block_combo = None
+    config.save_dir = f"/gscratch/weirdlab/yanda/semantic_world_modeling/datasets/expert_diffusion/"
+    generate_data("empty", config, block_names, locations)
 
 # generate_block_to_block()
 generate_block_to_location()
