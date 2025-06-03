@@ -3,7 +3,7 @@ from language_table.environments import blocks
 def get_config():
     config = ConfigDict()
     config.num_evals_per_reward = 800
-    config.save_dir = "/home/jacob/projects/semantic_world_modeling/language-table/language_table/datasets/train_diff_policy_2"
+    config.save_dir = "/gscratch/weirdlab/yanda/swm/language_table/datasets/train_diff_policy_3"
     config.random  = False
     config.max_episode_steps = 180
     config.seed_offset = 0

@@ -90,7 +90,6 @@ ABSOLUTE_LOCATIONS_POSES = [
     [X_MAX, CENTER_Y],
     [X_MAX, Y_MIN],
     [X_MAX, Y_MAX],
-
 ]
 LOCATION_SYNONYMS = {
     'top': ['top side', 'top', 'towards your base'],
@@ -135,15 +134,15 @@ class BlockToAbsoluteLocationReward(base_reward.LanguageTableReward):
   """Calculates reward/instructions for 'push block to absolute location'."""
 
   def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode, block_combo):
+               block_mode, block_combo, block= None, location=None):
     super(BlockToAbsoluteLocationReward, self).__init__(
         goal_reward=goal_reward,
         rng=rng,
         delay_reward_steps=delay_reward_steps,
         block_mode=block_mode, block_combo=block_combo)
-    self._block = None
+    self._block = block
     self._instruction = None
-    self._location = None
+    self._location = location
     self._target_translation = None
 
   def _sample_instruction(
@@ -160,10 +159,15 @@ class BlockToAbsoluteLocationReward(base_reward.LanguageTableReward):
   def reset(self, state, blocks_on_table):
     """Chooses new target block and location."""
     # Choose a random block.
-    block = self._sample_object(blocks_on_table)
-
-    # Choose a location randomly.
-    location = self._rng.choice(list(sorted(ABSOLUTE_LOCATIONS.keys())))
+    if self._block is None:
+      block = self._sample_object(blocks_on_table)
+    else:
+      block = self._block
+    
+    if self._location is None:
+      location = self._rng.choice(list(sorted(ABSOLUTE_LOCATIONS.keys())))
+    else:
+      location = self._location
 
     info = self.reset_to(state, block, location, blocks_on_table)
     # If the state of the board already triggers the reward, try to reset

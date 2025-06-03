@@ -92,6 +92,14 @@ class BlockToBlockReward(base_reward.LanguageTableReward):
   def get_goal_region(self):
     return self._target_translation, constants.TARGET_BLOCK_DISTANCE
 
+  def get_distance_between_blocks(self, state, block_idx):
+    start_block, target_block = self._block_combo[block_idx]
+    start_translation, _ = self._get_pose_for_block(start_block, state)
+    target_translation, _ = self._get_pose_for_block(target_block, state)
+    return np.linalg.norm(
+      np.array(start_translation) - np.array(target_translation)
+    )
+
   def reward(self, state):
     """Calculates reward given state."""
     # For now only have sparse reward.

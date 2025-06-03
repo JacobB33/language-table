@@ -14,4 +14,4 @@
 # limitations under the License.
 
 """Define constants shared across all 2d board environment rewards."""
-TARGET_BLOCK_DISTANCE = 0.05
+TARGET_BLOCK_DISTANCE = 0.075

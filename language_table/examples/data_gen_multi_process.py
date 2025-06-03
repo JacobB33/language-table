@@ -24,7 +24,7 @@ from language_table.environments.rewards import separate_blocks
 from language_table.eval import wrappers as env_wrappers
 
 _CONFIG = config_flags.DEFINE_config_file(
-    "config", "/home/jacob/projects/semantic_world_modeling/language-table/language_table/examples/config_generate.py", "Training configuration.", lock_config=True)
+    "config", "/gscratch/weirdlab/yanda/swm/language_table/examples/config_generate.py", "Training configuration.", lock_config=True)
 # _WORKDIR = flags.DEFINE_string("workdir", _CONFIG.value.save_dir, "Evaluation result directory.")
 
 tf.config.experimental.set_visible_devices([], "GPU")
@@ -36,9 +36,10 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         seed=ep_num + config.seed_offset,  # Ensure different seeds per worker
         delay_reward_steps = 5,
         block_combo=config.block_combo,
+        block=config.block,
+        location=config.location
     )
     env = gym_wrapper.GymWrapper(env)
-    # env = env_wrappers.ClipTokenWrapper(env)
     env = env_wrappers.CentralCropImageWrapper(
         env,
         target_width=config.target_width,
@@ -166,8 +167,8 @@ def generate_data(workdir, config):
         tf.io.gfile.makedirs(video_dir)
 
     rewards = {
-        "blocktoblock": block2block.BlockToBlockReward,
-        # "blocktoabsolutelocation": block2absolutelocation.BlockToAbsoluteLocationReward,
+        # "blocktoblock": block2block.BlockToBlockReward,
+        "blocktoabsolutelocation": block2absolutelocation.BlockToAbsoluteLocationReward,
         # "blocktoblockrelativelocation": block2block_relative_location.BlockToBlockRelativeLocationReward,
         # "blocktorelativelocation": block2relativelocation.BlockToRelativeLocationReward,
         # "separate": separate_blocks.SeparateBlocksReward,
