@@ -15,12 +15,12 @@ combos = [
 ]
 
 block_names = [
-    'blue_moon',
+    # 'blue_moon',
     # 'blue_cube',
     # 'green_cube',
-    'green_star',
-    'yellow_star',
-    'yellow_pentagon'
+    # 'green_star',
+    # 'yellow_star',
+    'yellow_pentagon',
     'red_moon',
     # 'red_pentagon',
 ]

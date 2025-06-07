@@ -28,14 +28,11 @@ class LanguageTableReward(object):
               #  block_combo=None, multi_task=False, block=None, location=None, blocks_to_locations=None):
     self._block_mode = block_mode
     self._goal_reward = goal_reward
-    self._multi_task = kwargs.get("multi_task", False)
+    self._block_combo = kwargs.get("block_combo", None)
+    self._multi_task = kwargs.get("multi_task", self._block_combo is not None and isinstance(self._block_combo[0], tuple))
     if self._multi_task:
       self._task_idx = 0
 
-    self._block_combo = kwargs.get(block_combo, None)
-
-    if self._multi_task and self._block_combo is None:
-      raise ValueError("block_combo must be provided if multi_task")
 
     self._rng = rng
     # TODO(tding): Handle this in all rewards

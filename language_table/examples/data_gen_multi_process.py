@@ -136,6 +136,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
     if config.save_video and ep_num == 0:
         # Write out video of rollout.
         video_path = os.path.join(workdir, "videos/", f"{reward_name}_{ep_num}_{success_str}.mp4")
+        os.makedirs(os.path.dirname(video_path), exist_ok=True)
         mediapy_lib.write_video(video_path, frames, fps=10)
 
     # Save the trajectory
@@ -223,16 +224,17 @@ def generate_data(workdir, config, blocks=None, locations=None):
                             # Create a tuple of arguments for each run
                             run_configs.append((reward_name, reward_factory, run_config, i, max_episode_steps, directory))
                 
-                with tqdm(total=len(run_configs), desc=f"{reward_name}", position=0, leave=True) as pbar:
+                with tqdm(total=len(run_configs), desc=f"{reward_name}") as pbar:
+                    results = [
+                        pool.apply_async(generate_episode_wrapper, args=args)
+                        for args in run_configs
+                    ]
+                    for res in results:
+                        res.get()  # blocks and raises errors
+                        pbar.update(1)
                 
-                    # Submit each job with its own callback
-                    for args in run_configs:
-                        pool.apply_async(generate_episode_wrapper, args=args, callback=lambda _: pbar.update(1))
-
-                    pool.close()
-                    pool.join()  # Wait for all tasks to finish
-                
-                logging.error("Finished reward: %s", reward_name)
+                print(f"Finished reward: {reward_name}")
+                # logging.error("Finished reward: %s", reward_name)
 
 
 def main(argv):
