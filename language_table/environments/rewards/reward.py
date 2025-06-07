@@ -24,15 +24,18 @@ import numpy as np
 class LanguageTableReward(object):
   """Base class for all 2d board rewards."""
 
-  def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode, block_combo, block=None, location=None):
+  def __init__(self, goal_reward, rng, delay_reward_steps, block_mode, **kwargs):
+              #  block_combo=None, multi_task=False, block=None, location=None, blocks_to_locations=None):
     self._block_mode = block_mode
     self._goal_reward = goal_reward
-    self._multi_task = block_combo is not None and isinstance(block_combo[0], tuple)
+    self._multi_task = kwargs.get("multi_task", False)
     if self._multi_task:
-      self._block_combo_idx = 0
+      self._task_idx = 0
 
-    self._block_combo = block_combo
+    self._block_combo = kwargs.get(block_combo, None)
+
+    if self._multi_task and self._block_combo is None:
+      raise ValueError("block_combo must be provided if multi_task")
 
     self._rng = rng
     # TODO(tding): Handle this in all rewards
@@ -71,7 +74,7 @@ class LanguageTableReward(object):
           blocks_on_table, 2, replace=False)
     else:
       if self._multi_task:
-        start_block, target_block = self._block_combo[self._block_combo_idx]
+        start_block, target_block = self._block_combo[self._task_idx]
       else:
         start_block, target_block = self._block_combo
     return start_block, target_block

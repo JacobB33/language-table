@@ -42,8 +42,8 @@ Y_MAX = Y_MAX_REAL
 CENTER_X = (X_MAX - X_MIN) / 2. + X_MIN
 CENTER_Y = (Y_MAX - Y_MIN)/2. + Y_MIN
 
-BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE = 0.115
-BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE = 0.1
+BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE = 0.15
+BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE = 0.125
 
 
 class Locations(enum.Enum):
@@ -134,15 +134,22 @@ class BlockToAbsoluteLocationReward(base_reward.LanguageTableReward):
   """Calculates reward/instructions for 'push block to absolute location'."""
 
   def __init__(self, goal_reward, rng, delay_reward_steps,
-               block_mode, block_combo, block= None, location=None):
+               block_mode, **kwargs):
     super(BlockToAbsoluteLocationReward, self).__init__(
         goal_reward=goal_reward,
         rng=rng,
         delay_reward_steps=delay_reward_steps,
-        block_mode=block_mode, block_combo=block_combo)
-    self._block = block
+        block_mode=block_mode, **kwargs)
+    
+    self._multi_task = kwargs.get("multi_task", False)
+    self._block = kwargs.get("block", None)
+    self._location = kwargs.get("location", None)
+    self._blocks_to_locations = kwargs.get("blocks_to_locations", None)
+
+    if self._multi_task and self._blocks_to_locations is None:
+      raise ValueError("blocks_to_locations must be provided if multi_task is True")
+    
     self._instruction = None
-    self._location = location
     self._target_translation = None
 
   def _sample_instruction(
@@ -158,23 +165,35 @@ class BlockToAbsoluteLocationReward(base_reward.LanguageTableReward):
 
   def reset(self, state, blocks_on_table):
     """Chooses new target block and location."""
-    # Choose a random block.
-    if self._block is None:
-      block = self._sample_object(blocks_on_table)
-    else:
+    if self._multi_task:
+      for i in range(len(self._blocks_to_locations)):
+        if self._blocks_to_locations[i][0] not in blocks_on_table:
+          raise ValueError(f"Block {self._blocks_to_locations[i][0]} not found in blocks_on_table")      
+
+      block = self._blocks_to_locations[0][0]
+      location = self._blocks_to_locations[0][1]
+      
+    elif self._block is not None and self._location is not None:
       block = self._block
-    
-    if self._location is None:
-      location = self._rng.choice(list(sorted(ABSOLUTE_LOCATIONS.keys())))
-    else:
       location = self._location
+    else:
+      block = self._sample_object(blocks_on_table)
+      location = self._rng.choice(list(sorted(ABSOLUTE_LOCATIONS.keys())))
 
     info = self.reset_to(state, block, location, blocks_on_table)
+
     # If the state of the board already triggers the reward, try to reset
     # again with a new configuration.
-    if self._in_goal_region(state, self._block, self._target_translation):
-      # Try again with a new board configuration.
-      return task_info.FAILURE
+    if self._multi_task:
+      for i in range(len(self._blocks_to_locations)):
+        b = self._blocks_to_locations[i][0]
+        loc = self._blocks_to_locations[i][1]
+        if self._in_goal_region(state, b, ABSOLUTE_LOCATIONS[loc], loc):
+          return task_info.FAILURE
+    else:
+      if self._in_goal_region(state, self._block, self._target_translation):
+        # Try again with a new board configuration.
+        return task_info.FAILURE
     return info
 
   def reset_to(
@@ -213,27 +232,50 @@ class BlockToAbsoluteLocationReward(base_reward.LanguageTableReward):
     reward = 0.0
     done = False
 
-    in_goal_region = self._in_goal_region(state, pushing_block,
-                                          target_translation)
+    if not self._multi_task:
+      in_goal_region = self._in_goal_region(state, pushing_block,
+                                            target_translation)
 
-    if in_goal_region:
-      if self._in_reward_zone_steps >= self._delay_reward_steps:
-        reward = self._goal_reward
+      if in_goal_region:
+        if self._in_reward_zone_steps >= self._delay_reward_steps:
+          reward = self._goal_reward
+          done = True
+        else:
+          logging.info('In reward zone for %d steps', self._in_reward_zone_steps)
+          self._in_reward_zone_steps += 1
+    else:
+      # calculate total reward for all blocks being in their goal region
+      for i in range(len(self._blocks_to_locations)):
+        b = self._blocks_to_locations[i][0]
+        loc = self._blocks_to_locations[i][1]
+        in_goal_region = self._in_goal_region(state, b, ABSOLUTE_LOCATIONS[loc], loc)
+        if in_goal_region:
+          if self._in_reward_zone_steps >= self._delay_reward_steps:
+            reward += self._goal_reward
+          else:
+            logging.info('In reward zone for %d steps', self._in_reward_zone_steps)
+            self._in_reward_zone_steps += 1
+      
+      reward = reward / len(self._blocks_to_locations)
+      if reward >= self._goal_reward:
         done = True
-      else:
-        logging.info('In reward zone for %d steps', self._in_reward_zone_steps)
-        self._in_reward_zone_steps += 1
+
     return reward, done
 
+  def get_region_translation(self, location):
+    return ABSOLUTE_LOCATIONS[location]
+
   def _in_goal_region(self, state, pushing_block,
-                      target_translation):
+                      target_translation, location = None):
     # Get current location of the target block.
     current_translation, _ = self._get_pose_for_block(pushing_block, state)
     # Compute distance between current translation and target.
     dist = np.linalg.norm(
         np.array(current_translation) - np.array(target_translation))
 
-    if self._location == Locations.CENTER.value:
+    target_location = self._location if location is None else location
+
+    if target_location == Locations.CENTER.value:
       target_dist = BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE
     else:
       target_dist = BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE

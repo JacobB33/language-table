@@ -15,26 +15,26 @@ combos = [
 ]
 
 block_names = [
-    'red_pentagon',
     'blue_moon',
-    'blue_cube',
-    'green_cube',
+    # 'blue_cube',
+    # 'green_cube',
     'green_star',
     'yellow_star',
     'yellow_pentagon'
     'red_moon',
+    # 'red_pentagon',
 ]
 
 locations = [
-    'center',
-    'center_left',
-    'center_right',
+    # 'center',
+    # 'center_left',
+    # 'center_right',
     'bottom',
     'bottom_left',
     'bottom_right',
-    'top_right',
-    'top_left',
-    'top',
+    # 'top_right',
+    # 'top_left',
+    # 'top',
 ]
 
 def generate_block_to_block():
@@ -56,7 +56,7 @@ def generate_block_to_block():
 
 def generate_block_to_location():
     config = ConfigDict()
-    config.num_evals_per_reward = 800
+    config.num_evals_per_reward = 200
     config.random  = False
     config.max_episode_steps = 180
     config.seed_offset = 0
@@ -68,7 +68,7 @@ def generate_block_to_location():
     config.block = None
     config.location = None
     config.block_combo = None
-    config.save_dir = f"/gscratch/weirdlab/yanda/semantic_world_modeling/datasets/expert_diffusion/"
+    config.save_dir = f"/gscratch/weirdlab/yanda/semantic_world_modeling/datasets/expert_diffusion3_200/"
     generate_data("empty", config, block_names, locations)
 
 # generate_block_to_block()
