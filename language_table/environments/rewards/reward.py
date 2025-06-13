@@ -28,7 +28,7 @@ class LanguageTableReward(object):
                block_mode, block_combo):
     self._block_mode = block_mode
     self._goal_reward = goal_reward
-    self._multi_task = block_combo is None or isinstance(block_combo[0], tuple)
+    self._multi_task = block_combo is not None and isinstance(block_combo[0], tuple)
     if self._multi_task:
       self._block_combo_idx = 0
 
