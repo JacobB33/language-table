@@ -1,10 +1,12 @@
 import os
 import pickle
 from copy import copy
+import random
 from typing import List
 
 import h5py
 import numpy as np
+import torch
 from tqdm.auto import tqdm
 
 from language_table.environments.blocks import LanguageTableBlockVariants
@@ -41,9 +43,12 @@ def process_one_file(config, file_path):
         # sample horizons using a beta distribution that
         # horizons = (np.random.beta(config.alpha, config.beta, config.num_horizon_samples)
         #             *  min(config.max_horizon, len(data['observations']) - i - 1))
-        horizons = np.random.uniform(0, min(len(data['observations']) - i - 1, config.max_horizon), config.num_horizon_samples)
-
-        horizons = set(round(h) for h in horizons)
+        # horizons = np.random.uniform(0, min(len(data['observations']) - i - 1, config.max_horizon), config.num_horizon_samples)
+        horizons = random.sample(
+            range(0, min(len(data['observations']) - i - 1, config.max_horizon) + 1),
+            config.num_horizon_samples
+        )
+        # horizons = set(round(h) for h in horizons)
         hdict = {}
         for horizon in horizons:
             previous_poses = data['block_states'][i]
@@ -113,6 +118,10 @@ def save_data(config, processed_data_list):
 
 def main(argv):
     config = _CONFIG.value
+    np.random.seed(config.seed)
+    random.seed(config.seed)
+    torch.manual_seed(config.seed)
+    
     files = [f for f in os.listdir(config.pickle_dir) if f.endswith(".pkl")]
     processed_data = []
     for file in tqdm(files):

@@ -10,5 +10,6 @@ def get_config():
     config.max_horizon = 60
     config.alpha = 1.6
     config.beta = 1.0
-    config.num_horizon_samples = 12
+    config.num_horizon_samples = 8
+    config.seed = 0
     return config

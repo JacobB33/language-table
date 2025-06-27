@@ -126,7 +126,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
         if not config.random:
             # this episode failed so we want to generate a new one. If we are in random mode, we want to keep the episode.
             return False
-    if config.save_video and ep_num == 0:
+    if config.save_video: # and ep_num == 0:
         # Write out video of rollout.
         video_path = os.path.join(workdir, "videos/", f"{reward_name}_{ep_num}_{success_str}.mp4")
         mediapy_lib.write_video(video_path, frames, fps=10)
@@ -158,6 +158,9 @@ def generate_episode_wrapper(reward_name, reward_factory, config, ep_num, max_ep
     while not generate_episode(reward_name, reward_factory, config, ep_num, max_episode_steps, workdir):
         pass
 
+def run_worker(job_tuple):
+    worker_fn, arg = job_tuple
+    return worker_fn(arg)
 
 def generate_data(workdir, config):
     """Evaluates the given checkpoint and writes results to workdir."""
@@ -171,7 +174,7 @@ def generate_data(workdir, config):
         # "blocktoblockrelativelocation": block2block_relative_location.BlockToBlockRelativeLocationReward,
         # "blocktorelativelocation": block2relativelocation.BlockToRelativeLocationReward,
         # "separate": separate_blocks.SeparateBlocksReward,
-        # "peg to block": point2block.PointToBlockReward,
+        # "peg_to_block": point2block.PointToBlockReward,
     }
 
     num_evals_per_reward = config.num_evals_per_reward
@@ -181,13 +184,25 @@ def generate_data(workdir, config):
             for i in range(num_evals_per_reward):
                 generate_episode_wrapper(reward_name, reward_factory, config, i, max_episode_steps, workdir)
     else:
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        with multiprocessing.Pool(processes=multiprocessing.cpu_count()*2) as pool:
+            # for reward_name, reward_factory in rewards.items():
+            #     worker_fn = partial(
+            #         generate_episode_wrapper, reward_name, reward_factory, config, max_episode_steps=max_episode_steps, workdir=workdir
+            #     )
+            #     pool.map(worker_fn, range(num_evals_per_reward))
+            #     logging.error("Finished reward: %s", reward_name)
+            jobs = []
             for reward_name, reward_factory in rewards.items():
                 worker_fn = partial(
-                    generate_episode_wrapper, reward_name, reward_factory, config, max_episode_steps=max_episode_steps, workdir=workdir
+                    generate_episode_wrapper, reward_name, reward_factory, config, 
+                    max_episode_steps=max_episode_steps, workdir=workdir
                 )
-                pool.map(worker_fn, range(num_evals_per_reward))
-                logging.error("Finished reward: %s", reward_name)
+                for i in range(num_evals_per_reward):
+                    jobs.append((worker_fn, i))
+            pool.map(run_worker, jobs)
+
+
+
 
 
 def main(argv):

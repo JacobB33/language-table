@@ -118,7 +118,7 @@ class TrajectoryVisualizer:
             qa_pairs = self.current_trajectory['qa_pairs']
             if 0 <= self.current_frame_index < len(qa_pairs):
                 frame_qa_pairs = qa_pairs[self.current_frame_index]
-                for question, answer in frame_qa_pairs:
+                for question, answer, _ in frame_qa_pairs:
                     if not self.search_regex or re.search(self.search_regex, question):
                         self.qa_listbox.insert(tk.END, f"Q: {question} | A: {answer}")
 
