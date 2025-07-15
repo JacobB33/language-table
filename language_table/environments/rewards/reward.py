@@ -66,7 +66,7 @@ class LanguageTableReward(object):
 
   def _sample_objects(self, blocks_on_table):
     # """Randomly sample two objects."""
-    if self._block_combo is None:
+    if self._block_combo is None and not self._multi_task:
       start_block, target_block = self._rng.choice(
           blocks_on_table, 2, replace=False)
     else:

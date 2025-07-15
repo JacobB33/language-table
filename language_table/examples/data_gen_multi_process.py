@@ -152,7 +152,7 @@ def generate_episode(reward_name, reward_factory, config, ep_num, max_episode_st
     }
     trajectory_path = os.path.join(workdir, "demos/", f"{reward_name}_{ep_num}_{success_str}.pkl")
     if not os.path.exists(os.path.dirname(trajectory_path)):
-        os.makedirs(os.path.dirname(trajectory_path))
+        os.makedirs(os.path.dirname(trajectory_path), exist_ok=True)
     pickle.dump(trajectory, open(trajectory_path, "wb"))
     return True
 
@@ -224,7 +224,7 @@ def generate_data(workdir, config, blocks=None, locations=None):
                             # Create a tuple of arguments for each run
                             run_configs.append((reward_name, reward_factory, run_config, i, max_episode_steps, directory))
                 
-                with tqdm(total=len(run_configs), desc=f"{reward_name}") as pbar:
+                with tqdm(total=len(run_configs), desc=f"{reward_name}", position=0, leave=True) as pbar:
                     results = [
                         pool.apply_async(generate_episode_wrapper, args=args)
                         for args in run_configs

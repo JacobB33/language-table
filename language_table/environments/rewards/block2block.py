@@ -43,6 +43,11 @@ def generate_all_instructions(block_mode):
 class BlockToBlockReward(base_reward.LanguageTableReward):
   """Block2block reward."""
 
+  def __init__(self, goal_reward, rng, delay_reward_steps, block_mode, **kwargs):
+    super().__init__(goal_reward, rng, delay_reward_steps, block_mode, **kwargs)
+    if self._multi_task:
+      self._block_combo_idx = 0
+
   def _sample_instruction(
       self, start_block, target_block, blocks_on_table):
     """Randomly sample a task involving two objects."""

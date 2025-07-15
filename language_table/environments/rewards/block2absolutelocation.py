@@ -42,8 +42,8 @@ Y_MAX = Y_MAX_REAL
 CENTER_X = (X_MAX - X_MIN) / 2. + X_MIN
 CENTER_Y = (Y_MAX - Y_MIN)/2. + Y_MIN
 
-BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE = 0.15
-BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE = 0.125
+BLOCK2ABSOLUTELOCATION_TARGET_DISTANCE = 0.125
+BLOCK2ABSOLUTELOCATION_CENTER_TARGET_DISTANCE = 0.085
 
 
 class Locations(enum.Enum):
@@ -141,7 +141,6 @@ class BlockToAbsoluteLocationReward(base_reward.LanguageTableReward):
         delay_reward_steps=delay_reward_steps,
         block_mode=block_mode, **kwargs)
     
-    self._multi_task = kwargs.get("multi_task", False)
     self._block = kwargs.get("block", None)
     self._location = kwargs.get("location", None)
     self._blocks_to_locations = kwargs.get("blocks_to_locations", None)
