@@ -194,7 +194,7 @@ def generate_data(workdir, config):
             jobs = []
             for reward_name, reward_factory in rewards.items():
                 worker_fn = partial(
-                    generate_episode_wrapper, reward_name, reward_factory, config, 
+                    generate_episode_wrapper, reward_name=reward_name, reward_factory=reward_factory, config=config, 
                     max_episode_steps=max_episode_steps, workdir=workdir
                 )
                 for i in range(num_evals_per_reward):
