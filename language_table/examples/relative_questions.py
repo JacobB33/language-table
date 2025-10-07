@@ -173,7 +173,7 @@ def generate_did_block_move_questions(past_states, current_states):
         distance_moved = np.linalg.norm(old_block - new_block)
         answer = distance_moved < RELATIVE_DISTANCE_THRESHOLD
         # Clean up block name
-        block_name = block.replace('-', ' ')
+        block_name = block.replace('_', ' ') 
 
         # Randomly select a question template
         template = random.choice(movement_templates)
@@ -202,7 +202,7 @@ def generate_relative_block_block_questions(past_states, current_states, num_que
         "Are the {block1} and {block2} closer together?",
         "Have the {block1} and {block2} moved closer to each other?",
         "Did the distance between {block1} and {block2} decrease?",
-        "Are the {block1} and {block2} nearer than before?"
+        "Are the {block1} and {block2} nearer than before?",
         "Is {block1} closer to the {block2}?"
     ]
 
