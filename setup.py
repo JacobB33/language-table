@@ -37,11 +37,11 @@ install_requires = [
     'opencv-python',
     'protobuf',
     'pybullet',
-    'rlds>=0.1.7',
+    #'rlds>=0.1.7',
     'scipy',
     'six',
     # 'tf-nightly>=2.12.0.dev20230201',
-    'tensorflow_datasets>=4.7.0',
+    #'tensorflow_datasets>=4.7.0',
     # 'tf_agents>=0.14.0',
 ]
 
