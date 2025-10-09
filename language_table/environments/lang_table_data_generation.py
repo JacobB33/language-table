@@ -147,7 +147,7 @@ class LanguageTableDataGeneration(LanguageTable):
             "Is the {block1} block in physical contact with the {block2} block?",
             "Are the {block1} and {block2} blocks touching each other?",
             "Is the {block1} and {block2} directly touching?",
-            "Do the {block1} and {block2} blocks meet?"
+            "Do the {block1} and {block2} blocks meet?",
         ]
 
         blocks, ids_to_names = self._get_visible_block_list()
@@ -263,7 +263,7 @@ class LanguageTableDataGeneration(LanguageTable):
     def get_peg_block_questions(self):
         peg_templates = [
             "Is the {block} next to the peg?",
-            "Is the peg next to the {block}?"
+            "Is the peg next to the {block}?",
             "Is the {block} touching the peg?",
             "Is the {block} block near the peg?",
             "Is the peg adjacent to the {block}?",
