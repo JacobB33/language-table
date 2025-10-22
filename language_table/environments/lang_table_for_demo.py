@@ -41,7 +41,7 @@ class LanguageTableDemo(LanguageTable):
 
         return result
 
-    def get_block_touching_questions(self, num_questions=8):
+    def get_block_touching_questions(self):
         touching_templates = [
             "Is the {block1} touching the {block2}?",
             "Are the {block1} and {block2} blocks in contact with each other?",
@@ -136,17 +136,17 @@ class LanguageTableDemo(LanguageTable):
             question = random.choice(question_templates).format(block=block.replace("_", " "))
             answer = new_peg_to_block < old_peg_to_block - RELATIVE_DISTANCE_THRESHOLD
             qa_pairs.append((question, answer))
-        qa_pairs.sort(key=lambda x: x[1])
-        num_true = sum(1 for _, answer in qa_pairs if answer)
-        if num_true == 0:
-            return random.sample(qa_pairs, 1)
+        true_pairs = [qa for qa in qa_pairs if qa[1]]
+        if len(true_pairs) == 0:
+            return random.sample(qa_pairs, 1)[0]
         else:
-            return random.sample(qa_pairs[:num_true], 1)
-    
+            return random.sample(true_pairs, 1)[0]
+
     def get_relative_block_block_question(self, past_states):
         current_states = self.get_block_states()
         qa_pairs = []
         keys = list(past_states.keys())
+        keys.remove("peg")
         pairs = set(tuple(sorted(pair)) for pair in itertools.combinations(keys, 2))
         # pairs = random.sample(unique_pairs, min(num_questions, len(unique_pairs)))
 
@@ -175,8 +175,8 @@ class LanguageTableDemo(LanguageTable):
         
         true_pairs = [qa for qa in qa_pairs if qa[1]]
         if len(true_pairs) == 0:
-            return random.sample(qa_pairs, 1)
+            return random.sample(qa_pairs, 1)[0]
         else:
-            return random.sample(true_pairs, 1)
+            return random.sample(true_pairs, 1)[0]
         
 
