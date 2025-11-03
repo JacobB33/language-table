@@ -73,13 +73,8 @@ def generate_block_move_direction_questions(past_states, current_states, num_que
         question, answer = _get_move_direction_q(block, direction, old_position, new_position)
         if answer:
             pass
-        
         qa_pairs.append((question, answer,  "blockmovedirection"))
-    if yes_questions > 0:
-        weights = [.5 / yes_questions] * yes_questions + [0.5 / (num_questions - yes_questions)] * (num_questions - yes_questions)
-    else:
-        weights = [0] * num_questions
-    return qa_pairs, weights
+    return qa_pairs
 
 
 
@@ -113,14 +108,12 @@ def generate_peg_move_questions(past_states, current_states):
     # sample one true and one false question
     true = [qa for qa in qa_pairs if qa[1]]
     if len(true) == 0:
-        weights = [0, 0]
         true_question = random.choice(qa_pairs)
     else:
         true_question = random.choice(true)
-        weights = [0.5, 0.5]
     false_question = random.choice([qa for qa in qa_pairs if not qa[1]])
 
-    return [true_question, false_question], weights
+    return [true_question, false_question]
 
 
 def generate_relative_peg_block_questions(past_states, current_states):
@@ -143,14 +136,7 @@ def generate_relative_peg_block_questions(past_states, current_states):
         question = random.choice(question_templates).format(block=block.replace("_", " "))
         answer = new_peg_to_block < old_peg_to_block - RELATIVE_DISTANCE_THRESHOLD
         qa_pairs.append((question, answer, "pegblockrealtive"))
-    qa_pairs.sort(key=lambda x: x[1])
-    num_true = sum(1 for _, answer, _ in qa_pairs if answer)
-    num_false = len(qa_pairs) - num_true
-    if num_true > 0 and num_false > 0:
-        weights = [0.5 / num_true] * num_true + [0.5 / num_false] * num_false
-    else:
-        weights = [0] * len(qa_pairs)
-    return qa_pairs, weights
+    return qa_pairs
 
 
 
@@ -183,14 +169,7 @@ def generate_did_block_move_questions(past_states, current_states):
         if "still in the same place" in question or "remain stationary" in question:
             answer = not answer
         qa_pairs.append((question, answer, "blockmoved"))
-    qa_pairs.sort(key=lambda x: x[1])
-    num_true = sum(1 for _, answer, _ in qa_pairs if answer)
-    num_false = len(qa_pairs) - num_true
-    if num_true > 0 and num_false > 0:
-        weights = [0.5 / num_true] * num_true + [0.5 / num_false] * num_false
-    else:
-        weights = [0] * len(qa_pairs)
-    return qa_pairs, weights
+    return qa_pairs
 
 def generate_relative_block_block_questions(past_states, current_states, num_questions):
     qa_pairs = []
@@ -228,154 +207,5 @@ def generate_relative_block_block_questions(past_states, current_states, num_que
     false_pairs = random.sample(false_pairs, num_questions - num_true)
     final_pairs = true_pairs + false_pairs
 
-    if num_true > 0:
-        weights = [0.5 / num_true] * num_true + [0.5 / (len(final_pairs) - num_true)] * (len(final_pairs) - num_true)
-    else:
-        weights = [0] * len(final_pairs)
-    return final_pairs, weights
+    return final_pairs
 
-# CLaude generated viz function with minior edits. Ignore if you do not need
-def visualize_block_move_direction(env, previous_image, current_image, past_states, current_states, num_questions=3):
-    """
-    Visualize block movement directions with vectors and angle annotations.
-
-    Args:
-        past_states: Dict mapping block names to previous positions
-        current_states: Dict mapping block names to current positions
-        num_questions: Number of movement questions to visualize
-    """
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Arc
-    import numpy as np
-    import random
-    import time
-
-
-
-    # Filter out non-moving blocks
-    moving_blocks = []
-    for block in past_states.keys():
-        if block == "peg":
-            continue
-
-        old_position = past_states[block]
-        new_position = current_states[block]
-        distance_moved = np.linalg.norm(old_position - new_position)
-
-        if distance_moved >= RELATIVE_DISTANCE_THRESHOLD:
-            moving_blocks.append(block)
-
-    if not moving_blocks:
-        print("No blocks moved significantly.")
-        return
-
-    # Sample blocks to visualize
-    blocks_to_visualize = random.sample(moving_blocks, min(num_questions, len(moving_blocks)))
-
-    for block in blocks_to_visualize:
-        # Get block positions
-        old_position = past_states[block]
-        new_position = current_states[block]
-        block_name = block.replace('_', ' ')
-
-        # Determine actual movement direction
-        movement_vector = new_position - old_position
-        movement_magnitude = np.linalg.norm(movement_vector)
-        movement_normalized = movement_vector / movement_magnitude
-
-        # Find the closest matching direction
-        best_direction = None
-        smallest_angle = 180
-
-        for direction in DIRECTIONS.keys():
-            reference_direction = np.array(DIRECTIONS[direction])
-            reference_normalized = reference_direction / np.linalg.norm(reference_direction)
-
-            dot_product = np.dot(movement_normalized, reference_normalized)
-            angle_radians = np.arccos(np.clip(dot_product, -1.0, 1.0))
-            angle_degrees = np.degrees(angle_radians)
-
-            if angle_degrees < smallest_angle:
-                smallest_angle = angle_degrees
-                best_direction = direction
-
-        # Create plot
-        plt.figure(figsize=(12, 8))
-
-        # Display the environment image
-        plt.subplot(1, 2, 1)
-        plt.imshow(current_image)
-        plt.title("Current Environment")
-        plt.axis('off')
-
-        # Create vector visualization
-        plt.subplot(1, 2, 2)
-        plt.imshow(previous_image)
-        plt.title(f"Movement Direction Analysis: {block_name}")
-        plt.axis('off')
-
-        # Create 3D points for projection
-        # Starting position
-        point3d_start = np.array([old_position[0], old_position[1], 0.01, 1])
-
-        # Ending position
-        point3d_end = np.array([new_position[0], new_position[1], 0.01, 1])
-
-        # Project points to 2D image coordinates
-        points3d = np.column_stack((point3d_start, point3d_end))
-        start_x, start_y = env.get_camera_pix_coords(point3d_start.reshape(-1, 4).T)
-        end_x, end_y = env.get_camera_pix_coords(point3d_end.reshape(-1, 4).T)
-
-        # Plot actual movement vector (red)
-        plt.arrow(start_x, start_y, end_x - start_x, end_y - start_y,
-                  color='red', width=2, head_width=10, head_length=10,
-                  length_includes_head=True, label="Actual Movement")
-
-        # Plot closest direction vector (blue)
-        closest_direction_vector = np.array(DIRECTIONS[best_direction]) * movement_magnitude
-        direction_end = old_position + closest_direction_vector
-
-        point3d_direction = np.array([direction_end[0], direction_end[1], 0.01, 1])
-        dir_end_x, dir_end_y = env.get_camera_pix_coords(point3d_direction.reshape(-1, 4).T)
-
-        plt.arrow(start_x, start_y, dir_end_x - start_x, dir_end_y - start_y,
-                  color='blue', width=2, head_width=10, head_length=10,
-                  length_includes_head=True, label=f"'{best_direction}' Direction")
-
-        # Draw an arc to show the angle between vectors
-        if smallest_angle > 0.5:  # Only draw if angle is significant
-            # Create an arc to show the angle between the vectors
-            arc_radius = 30
-            plt.gca().add_patch(Arc((start_x, start_y), arc_radius * 2, arc_radius * 2,
-                                    theta1=0, theta2=smallest_angle,
-                                    color='green', lw=2))
-
-            # Add angle text at the midpoint of the arc
-            midpoint_angle = smallest_angle / 2
-            angle_text_x = start_x + arc_radius * 1.5 * np.cos(np.radians(midpoint_angle))
-            angle_text_y = start_y + arc_radius * 1.5 * np.sin(np.radians(midpoint_angle))
-            plt.text(angle_text_x, angle_text_y, f"{smallest_angle:.1f}°",
-                     color='green', fontsize=12, ha='center', va='center')
-
-        # Generate a question about this movement
-        direction_string = random.choice(DIRECTION_SYNONYMS_RELATIVE_NO_CONNECTION[best_direction])
-        template = random.choice([
-            "Did the {block} move {direction}?",
-            "Has the {block} block shifted {direction}?",
-            "Was the {block} block moved {direction}?",
-        ])
-        question = template.format(block=block_name, direction=direction_string)
-
-        # Determine the answer based on the angle
-        threshold = 30 if 'diagonal' in best_direction else 20
-        answer = smallest_angle <= threshold
-
-        # Add question and answer as title
-        plt.suptitle(f"Question: {question}\nAnswer: {answer}\n" +
-                     f"Angle between actual movement and '{best_direction}': {smallest_angle:.1f}°",
-                     fontsize=12)
-
-        plt.legend(loc='upper right')
-        plt.tight_layout()
-        plt.show()
-        time.sleep(1)  # Pause between plots
