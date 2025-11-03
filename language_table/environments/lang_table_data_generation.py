@@ -52,7 +52,7 @@ class LanguageTableDataGeneration(LanguageTable):
         dist = np.linalg.norm(np.array(pose_to) - np.array(pose_of))
         return dist < scale * (MAGNITUDE_X - 0.01)
     
-    def check_direction(self, relative_to_pose, relative_of_pose, direction, scale, question="", viz=False):
+    def check_direction(self, relative_to_pose, relative_of_pose, direction, scale, question=""):
         # Consider the end point of the line 2x longer than the offset.
         mag_x = MAGNITUDE_X_DIAG if 'diagonal' in direction else MAGNITUDE_X
         mag_y = MAGNITUDE_Y_DIAG if 'diagonal' in direction else MAGNITUDE_Y
@@ -78,64 +78,6 @@ class LanguageTableDataGeneration(LanguageTable):
             if dist < BLOCK2BLOCK_REL_LOCATION_TARGET_DISTANCE:
                 pushing_block_on_line = True
                 break
-        if viz:
-            state = self._compute_state()
-            image = state['rgb']
-            # Create a matplotlib figure for visualization
-            plt.figure(figsize=(12, 8))
-            plt.subplot(1, 2, 1)
-            plt.imshow(image)
-            plt.title("Current Environment")
-            plt.axis('off')
-            # Second subplot for projected points
-            plt.subplot(1, 2, 2)
-            plt.imshow(image)
-            plt.title("Relative Direction Visualization")
-            plt.axis('off')
-            line_points = []
-            for cand_offset in diffs:
-                point = relative_to_pose + cand_offset
-
-                line_points.append([point[0], point[1], 0.0, 1])  # Small z value to be above the table
-
-            # Add target block and pushing block positions
-            line_points.append([relative_to_pose[0], relative_to_pose[1], 0.0, 1])
-            line_points.append([relative_of_pose[0], relative_of_pose[1], 0.0, 1])
-            # Project points to image coordinates
-            line_points_np = np.array(line_points).T
-            pixel_x, pixel_y = self.get_camera_pix_coords(line_points_np)
-            # Plot points with gradient color (blue to red)
-            colors = plt.cm.coolwarm(np.linspace(0, 1, len(pixel_x) - 2))
-            # Plot the line with gradient color to show direction
-            for j in range(len(pixel_x) - 3):
-                plt.plot(pixel_x[j:j + 2], pixel_y[j:j + 2], color=colors[j], linewidth=2)
-            # Plot the target block position
-            plt.scatter(pixel_x[-2], pixel_y[-2], color='green', s=100, marker='o',
-                        label=f"Relative To Block ")
-            # Plot the pushing block position
-            plt.scatter(pixel_x[-1], pixel_y[-1], color='blue', s=100, marker='x',
-                        label=f"Relative Of Block")
-            # # Add a circle of points around the "relative to" block with radius 0.1 meters
-            # circle_points = []
-            # num_circle_points = 36  # For a smooth circle
-            # circle_radius = 0.03  # 10cm radius
-            # for angle in np.linspace(0, 2 * np.pi, num_circle_points):
-            #     # Calculate point on circle
-            #     circle_x = relative_to_pose[0] + circle_radius * np.cos(angle)
-            #     circle_y = relative_to_pose[1] + circle_radius * np.sin(angle)
-            #     circle_points.append([circle_x, circle_y, 0.0, 1])
-            #
-            # # Convert circle points to numpy array for projection
-            # circle_points_np = np.array(circle_points).T
-            # circle_pixel_x, circle_pixel_y = self.get_camera_pix_coords(circle_points_np)
-            # plt.plot(circle_pixel_x, circle_pixel_y, 'y-', linewidth=2, alpha=0.7, label=f"{circle_radius}m Radius")
-            plt.suptitle(f"Question: {question}\nAnswer: {pushing_block_on_line}", fontsize=14)
-            plt.legend(loc='upper right')
-            # Show the plot
-            plt.tight_layout()
-            plt.show()
-            time.sleep(1)
-
         return pushing_block_on_line
     
     def get_block_touching_questions(self, num_questions=8):
@@ -186,13 +128,8 @@ class LanguageTableDataGeneration(LanguageTable):
         qa_pairs_yes = random.sample(yes_pairs, yes_to_sample)
         qa_pairs_no = random.sample(no_pairs, no_to_sample)
         qa_pairs = qa_pairs_yes + qa_pairs_no
-        if yes_to_sample == 0:
-            weights = [0] * len(qa_pairs)
-        else:
-            weights = [.5 / yes_to_sample] * yes_to_sample + [.5 / no_to_sample] * no_to_sample
-        assert len(weights) == len(qa_pairs), f"Weight length mismatch in block_touching: {len(weights)} weights for {len(qa_pairs)} questions"
 
-        return qa_pairs, weights
+        return qa_pairs
 
 
     def get_relative_block2block_questions(self, number_of_questions=5, scale=1.3):
@@ -227,7 +164,7 @@ class LanguageTableDataGeneration(LanguageTable):
             target_string = random.choice(DIRECTION_SYNONYMS[direction])
             template = random.choice(rel_position_templates)
             question = template.format(block1=block1_name, direction=target_string, block2=block2_name)
-            pushing_block_on_line = self.check_direction(relative_to, relative_of, direction, scale, question=question, viz=False)
+            pushing_block_on_line = self.check_direction(relative_to, relative_of, direction, scale, question=question)
             return question, pushing_block_on_line, "blockdirblock"
         
         n_blocks = len(blocks)
@@ -253,12 +190,8 @@ class LanguageTableDataGeneration(LanguageTable):
             if result[1]:
                 continue
             qa_pairs.append(result)
-        if num_yes > 0:
-            weights = [0.5/num_yes] * num_yes + [0.5 / (len(qa_pairs) - num_yes)] * (len(qa_pairs) - num_yes)
-        else:
-            weights = [0] * len(qa_pairs)
-        assert len(weights) == len(qa_pairs), f"Weight length mismatch in relative_block2block: {len(weights)} weights for {len(qa_pairs)} questions"
-        return qa_pairs, weights
+
+        return qa_pairs
 
     def get_peg_block_questions(self):
         peg_templates = [
@@ -294,12 +227,7 @@ class LanguageTableDataGeneration(LanguageTable):
             qa_pairs.append((question, answer, "pegtoblock"))
             trues += 1 if answer else 0
         qa_pairs.sort(key=lambda pair: pair[1])
-        if not trues:
-            weights = [0] * len(qa_pairs)
-        else:
-            weights = [0.5/trues] * trues + [0.5/(len(qa_pairs) - trues)] * (len(qa_pairs) - trues)
-        assert len(weights) == len(qa_pairs), f"Weight length mismatch in peg_block: {len(weights)} weights for {len(qa_pairs)} questions"
-        return qa_pairs, weights
+        return qa_pairs
 
 
     def get_block_to_board_questions(self, number_of_questions=8):
@@ -363,14 +291,8 @@ class LanguageTableDataGeneration(LanguageTable):
             if pair[1]:
                 continue
             qa_pairs.append(pair)
-        if num_yes > 0:
-            weights = [.5/num_yes] * num_yes + [.5/(len(qa_pairs) - num_yes)] * (len(qa_pairs) - num_yes)
-        else:
-            weights = [0] * len(qa_pairs)
-        
-        assert len(weights) == len(qa_pairs), f"Weight length mismatch in block_to_board: {len(weights)} weights for {len(qa_pairs)} questions"
 
-        return qa_pairs, weights
+        return qa_pairs
 
     def get_peg_relative_to_block_questions(self, number_of_questions=5, scale=1.3):
         # Define various question templates for the peg relative to block questions
@@ -408,7 +330,7 @@ class LanguageTableDataGeneration(LanguageTable):
             question = template.format(direction=target_string, block=block_name)
 
 
-            peg_on_line = self.check_direction(target_block_translation, peg_position, direction, scale, question=question, viz=False)
+            peg_on_line = self.check_direction(target_block_translation, peg_position, direction, scale, question=question)
 
             return question, peg_on_line, "pegdirblock"
         qa_pairs = []
@@ -423,10 +345,5 @@ class LanguageTableDataGeneration(LanguageTable):
         while len(qa_pairs) < number_of_questions:
             idx = random.choice(block_idxs)
             qa_pairs.append(_get_peg_rel_question(idx, False))
-        if num_yes > 0:
-            weights = [0.5/num_yes] * num_yes + [0.5/(len(qa_pairs)-num_yes)] * (len(qa_pairs) - num_yes)
-        else:
-            weights = [0.0] * len(qa_pairs)
-        assert len(weights) == len(qa_pairs), f"Weight length mismatch in block_to_board: {len(weights)} weights for {len(qa_pairs)} questions"
-        return qa_pairs, weights
+        return qa_pairs
 
